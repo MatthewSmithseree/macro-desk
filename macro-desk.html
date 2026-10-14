@@ -1,0 +1,804 @@
+<title>Macro Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky header + tab bar, one roomy column (max 1080px); sections are quiet lists, not card walls. Single light theme by choice. */
+:root{
+  --bg:#F5F7F8; --surface:#FFFFFF; --ink:#13212B; --muted:#5D6B75; --line:#E2E7EA;
+  --accent:#0D5C63; --accent-soft:#E3F0F0;
+  --up:#17784A; --up-soft:#E4F3EA; --down:#B3261E; --down-soft:#FBE9E7; --warn:#8A5A00; --warn-soft:#FBF1DC;
+  --f-ui:"Schibsted Grotesk",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.5}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:16px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding-block:14px 10px}
+.brand{font-weight:700;font-size:20px;letter-spacing:-.01em}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--warn-soft);color:var(--warn)}
+.clock{margin-left:auto;font-size:13px;color:var(--muted)}
+.sessions{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:10px}
+.sess{font-size:12px;padding:2px 8px;border-radius:6px;border:1px solid var(--line);color:var(--muted)}
+.sess.open{border-color:var(--up);color:var(--up);background:var(--up-soft)}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{font:inherit;font-weight:600;font-size:14px;color:var(--muted);background:none;border:0;padding:10px 12px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+button:focus-visible,input:focus-visible,label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+main{padding-block:24px 64px}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:20px}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:3px}
+.seg button{font:inherit;font-size:13px;font-weight:600;border:0;background:none;color:var(--muted);padding:5px 11px;border-radius:6px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;margin:22px 0 8px}
+h2:first-of-type{margin-top:0}
+.sub{font-size:13px;color:var(--muted);margin:-6px 0 12px}
+.src{display:none;font-size:12px;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:4px 8px;margin:4px 0 10px}
+body.show-src .src{display:block}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.rows{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));padding:4px 0}
+.inst{display:grid;grid-template-columns:minmax(0,1fr) auto 72px;align-items:center;gap:10px;padding:6px 14px;font-size:14px}
+.inst .nm{font-weight:600;min-width:0;line-height:1.25}
+.inst .tk{display:block;font-size:11px;color:var(--muted);font-weight:400}
+.inst .px{text-align:right;line-height:1.25}
+.inst .px b{display:block;font-weight:500;font-size:14px}
+.chg{font-size:12px}
+.up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--muted)}
+svg.spark{width:72px;height:24px;display:block}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.chip{font:inherit;font-size:13px;font-weight:600;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer}
+.chip[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.news{padding:16px;border-bottom:1px solid var(--line);display:grid;gap:6px}
+.news:last-child{border-bottom:0}
+.meta{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px}
+.mkt{font-weight:700;color:var(--accent)}
+.news h3{margin:0;font-size:16px;font-weight:600;line-height:1.35;text-wrap:balance}
+.react{display:flex;flex-wrap:wrap;gap:6px}
+.rx{font-size:12px;padding:3px 8px;border-radius:6px}
+.rx.up{background:var(--up-soft)} .rx.down{background:var(--down-soft)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:14px}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;text-align:left;padding:10px 14px;border-bottom:1px solid var(--line)}
+td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right}
+tr.day td{background:var(--bg);font-weight:700;font-size:13px;padding-block:8px}
+table.cal{font-size:13px;min-width:720px}
+table.cal th{padding:7px 10px;font-size:11px}
+table.cal td{padding:6px 10px;vertical-align:middle}
+table.cal tr.day td{padding-block:5px;font-size:12px}
+table.cal tr.ev{cursor:pointer}
+table.cal tr.ev:hover td{background:var(--accent-soft)}
+table.cal .ctry{color:var(--muted);white-space:nowrap;font-size:12px}
+table.cal .evn{font-weight:600}
+table.cal .car{display:inline-block;width:14px;color:var(--accent);font-size:11px}
+table.cal .nw{white-space:nowrap}
+table.cal .rxc{white-space:nowrap}
+table.cal .rxc .rx{font-size:11px;padding:2px 6px;margin-right:4px}
+table.cal tr.ev[aria-expanded="true"] td{border-bottom-color:transparent}
+table.cal tr.det td{background:var(--bg);padding:4px 10px 14px 34px;white-space:normal}
+.detail{display:grid;gap:10px;max-width:900px}
+.detail .lead{margin:0;font-weight:600;font-size:14px}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:14px;font-size:13px;line-height:1.5}
+.dgrid .lbl{margin-bottom:3px}
+.cc{display:block;font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em}
+.tag{font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.surp{font-size:12px;font-weight:600;padding:1px 6px;border-radius:5px}
+.surp.up{background:var(--up-soft)} .surp.down{background:var(--down-soft)}
+.cbpick{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.cbpick .chip{white-space:nowrap}
+.cbone{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+@media (min-width:860px){.cbone{grid-template-columns:300px minmax(0,1fr)}.cbone aside{position:sticky;top:130px}}
+.cbmain{display:grid;gap:16px;min-width:0}
+.cbmain .cb>.lbl{margin:0}
+.topics .qt{font-style:italic;color:var(--muted);border-left:2px solid var(--line);padding-left:10px;margin-top:4px}
+.chg-box{font-size:14px;background:var(--accent-soft);border-radius:8px;padding:10px 12px}
+.qa{display:grid;gap:2px;font-size:14px;padding:8px 0;border-top:1px solid var(--line)}
+.qa b{font-weight:600}
+ul.tl{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:14px}
+ul.tl li{display:grid;grid-template-columns:52px minmax(0,1fr);gap:10px}
+.cb{padding:18px;display:grid;gap:14px;align-content:start}
+.cb header{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.cb h3{margin:0;font-size:17px}
+.rate{font-size:22px;font-weight:500}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;text-align:right}
+.lbl{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-bottom:6px}
+.cd{font-size:13px;color:var(--muted)} .cd b{color:var(--ink)}
+.na{font-size:13px;color:var(--warn);background:var(--warn-soft);padding:6px 9px;border-radius:6px}
+.quote{font-size:13px;display:grid;gap:3px;padding:8px 0;border-top:1px solid var(--line)}
+.tone{font-size:11px;font-weight:700;padding:1px 6px;border-radius:5px;justify-self:start}
+.tone.hawk{background:var(--down-soft);color:var(--down)} .tone.dove{background:var(--up-soft);color:var(--up)} .tone.neu{background:var(--bg);color:var(--muted)}
+svg.path{width:100%;height:90px;display:block}
+.quote{padding:12px 0;gap:6px}
+.qh{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.qtype{font-size:11px;font-weight:700;padding:1px 6px;border-radius:5px;border:1px solid var(--line);color:var(--muted)}
+.quote b{font-size:14px;font-weight:600;line-height:1.4}
+.quote ul{margin:0;padding-left:18px;display:grid;gap:3px;color:var(--ink)}
+.quote .who{font-size:12px;color:var(--muted)}
+.tonebar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--bg);margin:2px 0 6px}
+.tonebar span{display:block;height:100%}
+.tonesum{font-size:13px;color:var(--muted);margin-bottom:4px}
+.tonesum b{color:var(--ink)}
+.gov{background:var(--bg);border-radius:8px;padding:14px;display:grid;gap:10px}
+.gov .ev{font-size:12px;color:var(--muted)}
+.gov .sum{font-size:14px;margin:0}
+.topics{margin:0;display:grid;gap:9px}
+.topics dt{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
+.topics dd{margin:2px 0 0;font-size:14px;line-height:1.45}
+details.more summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--accent);padding:8px 0 2px}
+.why{font-size:13px;color:var(--muted);margin-top:2px;max-width:46ch}
+.ai{font-size:14px;color:var(--ink);background:var(--bg);border-radius:6px;padding:7px 10px}
+.ai b{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-right:6px}
+.curve{padding:12px 14px;margin-top:10px;display:grid;gap:8px}
+.curve .chips{margin:0}
+.curve .chip{font-size:12px;padding:3px 10px}
+svg.yc{width:100%;max-width:520px;height:auto;display:block}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:16px}
+.rcard{padding:18px;display:grid;gap:10px;align-content:start}
+.rcard .house{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
+.rcard h3{margin:0;font-size:17px;line-height:1.3;text-wrap:balance}
+.rcard ul{margin:0;padding-left:18px;display:grid;gap:5px;font-size:14px}
+.rcard a{color:var(--accent);font-weight:600;font-size:14px;text-decoration:none}
+.rcard a:hover{text-decoration:underline}
+.past{list-style:none;padding:6px 0 0!important;font-size:13px!important}
+.past li{display:flex;gap:10px}
+.top1{display:grid;gap:0}
+.story{padding:14px 16px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:28px minmax(0,1fr);gap:4px 10px}
+.story:last-child{border-bottom:0}
+.story .rk{font-family:var(--f-num);font-size:18px;color:var(--accent);font-weight:500;grid-row:span 3}
+.story h3{margin:0;font-size:16px;font-weight:700;line-height:1.3;text-wrap:balance}
+.story p{margin:0;font-size:14px;color:var(--muted)}
+.wire{font-size:14px}
+.wl{display:grid;grid-template-columns:44px 96px minmax(0,1fr);gap:10px;padding:7px 14px;border-bottom:1px solid var(--line);align-items:baseline}
+.wl:last-child{border-bottom:0}
+.wl .cat{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.wl.hot .hl{font-weight:600}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--down);margin-right:6px;vertical-align:1px}
+@media (max-width:520px){.wl{grid-template-columns:44px minmax(0,1fr)}.wl .cat{grid-column:2}.wl .hl{grid-column:2}}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted)}
+.legend i{display:inline-block;width:18px;height:0;border-top:2px solid var(--accent);vertical-align:middle;margin-right:6px}
+.legend i.prev{border-top:2px dashed var(--muted)}
+details.tracked{margin-top:12px}
+details.tracked summary{cursor:pointer;font-weight:600;color:var(--accent);font-size:14px}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:16px;padding:14px 0}
+.tgrid h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.tgrid ul{margin:0;padding:0;list-style:none;font-size:14px;display:grid;gap:3px}
+.tgrid .num{font-size:12px;color:var(--muted)}
+.rtag{font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--warn-soft);color:var(--warn);margin-left:6px;white-space:nowrap}
+.note{font-size:13px;color:var(--muted);margin-top:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="bar">
+      <span class="brand">Macro Desk</span>
+      <span class="pill">Prototype · sample data, not real prices</span>
+      <span class="clock num" id="clock"></span>
+    </div>
+    <div class="sessions" id="sessions"></div>
+    <nav class="tabs" role="tablist" id="tabs">
+      <button role="tab" data-tab="markets">Markets</button>
+      <button role="tab" data-tab="top">Top</button>
+      <button role="tab" data-tab="news">News</button>
+      <button role="tab" data-tab="calendar">Calendar</button>
+      <button role="tab" data-tab="cb">Central Banks</button>
+      <button role="tab" data-tab="research">Research</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="toolbar">
+    <label class="chk"><input type="checkbox" id="srcToggle"> Show where each block's data would come from (free sources)</label>
+  </div>
+
+  <!-- MARKETS -->
+  <section data-panel="markets">
+    <div class="toolbar">
+      <div class="seg" id="period" role="group" aria-label="Change period">
+        <button data-p="1D">1D</button><button data-p="1W">1W</button><button data-p="1M">1M</button><button data-p="6M">6M</button><button data-p="1Y">1Y</button>
+      </div>
+      <span class="sub" style="margin:0">Price updated about every 15 min while markets are open</span>
+    </div>
+    <div id="markets"></div>
+    <div id="earnBlock">
+      <p class="src">Finnhub free earnings calendar, filtered to the tracked names below.</p>
+      <h2>Earnings calendar · AI</h2>
+      <div class="panel tbl"><table id="earnTech"></table></div>
+      <h2>Earnings calendar · Financials</h2>
+      <div class="panel tbl"><table id="earnFin"></table></div>
+      <p class="note">US companies reporting after the close publish around 04:00–05:00 HKT the next morning.</p>
+      <details class="tracked"><summary>Tracked companies</summary><div class="tgrid" id="tracked"></div></details>
+    </div>
+  </section>
+
+  <!-- TOP -->
+  <section data-panel="top" hidden>
+    <p class="src">All headlines from the news feeds (RSS + Finnhub), refreshed every 15 min. Gemini scores each one 1–5 for market impact and groups duplicate stories; the highest-scoring stories of the last 24 hours become Top Stories.</p>
+    <h2>Top stories · last 24 hours</h2>
+    <div class="panel top1" id="topStories"></div>
+    <h2>Latest headlines</h2>
+    <div class="chips" id="wireFilter"></div>
+    <div class="panel wire" id="wire"></div>
+    <p class="note"><span class="dot"></span>marks headlines scored as market-moving (4 or 5 out of 5). All headlines here are samples.</p>
+  </section>
+
+  <!-- NEWS -->
+  <section data-panel="news" hidden>
+    <div class="chips" id="newsFilter"></div>
+    <p class="src">Headlines: free RSS feeds (Nikkei Asia, CNBC, MarketWatch, central banks) + Finnhub free market news. Market tag and "why it matters" note: Google Gemini free tier. Price reaction: Yahoo Finance, from the last price before the headline to that instrument's session close.</p>
+    <div class="panel" id="newsList"></div>
+    <p class="note">Each headline is tagged with the market it affects. The chips show how the linked instruments moved from just before the headline to the end of that day's session.</p>
+  </section>
+
+  <!-- CALENDAR -->
+  <section data-panel="calendar" hidden>
+    <h2>Market-moving releases · times in HKT</h2>
+    <div class="toolbar">
+      <div class="seg" id="calWin" role="group" aria-label="Calendar window">
+        <button data-w="past">Past 2 weeks</button><button data-w="next">Today &amp; next 2 weeks</button>
+      </div>
+      <button class="chip" id="calAll" aria-pressed="false">Expand all</button>
+    </div>
+    <p class="src">Forex Factory weekly calendar feed (free JSON: impact, forecast, previous). Actual values: needs a second source, to confirm. The indicator guides are written once per indicator and stored with the site.</p>
+    <div class="panel tbl"><table id="ecoTbl" class="cal"></table></div>
+    <p class="note">Tap any row for a guide to the indicator. Reactions show how markets moved from just before the release to that market's close.</p>
+  </section>
+
+  <!-- CENTRAL BANKS -->
+  <section data-panel="cb" hidden>
+    <p class="src">Policy rates and meeting dates: entered by hand once a year. Fed projections: FRED (SEP series). ECB projections: ECB Data Portal. Commentary: each bank's speeches RSS feed, each bank's speeches page; the full transcript is fetched and Gemini (free tier) breaks it down by topic (inflation, jobs, policy path, markets). Press conferences, minutes and statements are included too; the live version names each speaker and links to the transcript. Market-implied path: Fed only, from fed funds futures; no free source found for the others yet.</p>
+    <div class="cbgrid" id="cbGrid"></div>
+  </section>
+
+  <!-- RESEARCH -->
+  <section data-panel="research" hidden>
+    <p class="src">The script checks each page once a week. Gemini turns the latest piece into 3–4 bullets; the full piece stays on the publisher's site behind the link.</p>
+    <div class="rgrid" id="research"></div>
+    <p class="note">The summaries here are placeholders, not taken from the actual reports. The links go to the real publisher pages.</p>
+  </section>
+</main>
+
+<script>
+/* ---------- helpers ---------- */
+function rng(seed){let h=1779033703^seed.length;for(let i=0;i<seed.length;i++){h=Math.imul(h^seed.charCodeAt(i),3432918353);h=h<<13|h>>>19}
+  return function(){h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);h^=h>>>16;return (h>>>0)/4294967296}}
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=(v,d)=>v.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const cls=v=>v>0.0001?"up":v<-0.0001?"down":"flat";
+const sign=v=>(v>0?"+":"")+v;
+
+/* ---------- clock & sessions (real current time) ---------- */
+const SESS=[["Tokyo","Asia/Tokyo",9,0,15,30],["Hong Kong","Asia/Hong_Kong",9,30,16,0],["Mumbai","Asia/Kolkata",9,15,15,30],["London","Europe/London",8,0,16,30],["Frankfurt","Europe/Berlin",9,0,17,30],["New York","America/New_York",9,30,16,0]];
+function tick(){
+  const now=new Date();
+  document.getElementById("clock").textContent=now.toLocaleString("en-GB",{timeZone:"Asia/Hong_Kong",weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})+" HKT";
+  document.getElementById("sessions").innerHTML=SESS.map(([n,tz,oh,om,ch,cm])=>{
+    const p=Object.fromEntries(new Intl.DateTimeFormat("en-US",{timeZone:tz,weekday:"short",hour:"numeric",minute:"numeric",hourCycle:"h23"}).formatToParts(now).map(x=>[x.type,x.value]));
+    const m=+p.hour*60+ +p.minute, wk=!["Sat","Sun"].includes(p.weekday);
+    const open=wk&&m>=oh*60+om&&m<ch*60+cm;
+    return `<span class="sess ${open?"open":""}">${n} · ${open?"open":"closed"}</span>`}).join("");
+}
+tick();setInterval(tick,30000);
+
+/* ---------- markets ---------- */
+const GROUPS=[
+ {tab:"Equities",name:"Equities",src:"Yahoo Finance via the yfinance Python library (about 15 min delayed, free).",items:[
+  ["S&P 500","^GSPC",6700,2,.009],["Nasdaq Composite","^IXIC",22800,2,.012],["Euro Stoxx 50","^STOXX50E",5600,2,.01],["Nikkei 225","^N225",46000,2,.013],
+  ["Hang Seng","^HSI",26000,2,.014],["KOSPI","^KS11",3500,2,.012],["Nifty 50","^NSEI",25200,2,.008],["SSE Composite","000001.SS",3850,2,.01]]},
+ {tab:"Rates",name:"Government bonds",yld:true,curve:true,note:"Yields, with the change in basis points. Daily close (no free intraday source).",src:"US: Treasury.gov daily yield curve. Bund: Deutsche Bundesbank. Gilt: Bank of England. JGB: Japan Ministry of Finance. All free, official, end of day.",items:[
+  ["US 2Y","UST 2Y",3.52,3,.03],["US 5Y","UST 5Y",3.62,3,.03],["US 10Y","UST 10Y",4.05,3,.025],["US 30Y","UST 30Y",4.65,3,.02],
+  ["Germany 10Y (Bund)","DE 10Y",2.65,3,.03],["UK 10Y (Gilt)","GB 10Y",4.55,3,.025],["Japan 10Y (JGB)","JP 10Y",1.65,3,.03]]},
+ {tab:"Rates",name:"Yield spreads",bp:true,note:"Long yield minus short yield, in basis points. Below zero means the curve is inverted, a classic recession signal.",src:"Calculated from the Treasury yields above.",items:[
+  ["US 2s10s","10Y minus 2Y",53,0,.06],["US 5s30s","30Y minus 5Y",103,0,.05]]},
+ {tab:"FX",name:"FX",src:"Yahoo Finance via yfinance. DXY = ICE Dollar Index.",items:[
+  ["USD/JPY","JPY=X",150.2,2,.005],["Dollar Index","DX-Y.NYB",99.0,2,.004],["USD/HKD","HKD=X",7.78,4,.0004],["EUR/USD","EURUSD=X",1.165,4,.004],
+  ["AUD/USD","AUDUSD=X",0.655,4,.006],["USD/KRW","KRW=X",1410,2,.005],["USD/CNH","CNH=X",7.13,4,.002]]},
+ {tab:"Credit",name:"Credit spreads",note:"Option-adjusted spreads in basis points. Daily close, published with a one-day lag. Higher = more stress.",bp:true,src:"FRED (St. Louis Fed), ICE BofA OAS series, free API key. Daily only.",items:[
+  ["US Investment Grade","BAMLC0A0CM",78,0,.025],["US BBB","BAMLC0A4CBBB",102,0,.025],["US High Yield","BAMLH0A0HYM2",285,0,.03],["US CCC & lower","BAMLH0A3HYC",820,0,.03],
+  ["Euro High Yield","BAMLHE00EHYIOAS",300,0,.03],["Asia EM Corporate","BAMLEMRACRPIASIAOAS",120,0,.025]]},
+ {tab:"Commodities",name:"Commodities & crypto",src:"Yahoo Finance via yfinance (futures front month for oil and gold).",items:[
+  ["Gold (XAU/USD)","GC=F",4000,2,.01],["Brent crude","BZ=F",66,2,.018],["WTI crude","CL=F",62,2,.019],["Bitcoin","BTC-USD",112000,0,.025]]}
+];
+const PTS={"1D":40,"1W":35,"1M":22,"6M":60,"1Y":60}, SCALE={"1D":.35,"1W":.5,"1M":.6,"6M":.75,"1Y":.85};
+function series(tk,base,vol,p){const r=rng(tk+p);const n=PTS[p];let v=[base];const s=vol*SCALE[p];
+  for(let i=1;i<n;i++)v.push(v[i-1]*(1+(r()-.5)*s));const k=base/v[n-1];return v.map(x=>x*k)}
+function spark(v,c){const w=120,h=36,mn=Math.min(...v),mx=Math.max(...v),sp=mx-mn||1;
+  const pts=v.map((y,i)=>[i/(v.length-1)*w,3+(h-6)*(1-(y-mn)/sp)]);
+  const d=pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join("");
+  const col=c==="up"?"var(--up)":c==="down"?"var(--down)":"var(--muted)";const e=pts[pts.length-1];
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><path d="${d}L${w} ${h}L0 ${h}Z" fill="${col}" opacity=".08"/><path d="${d}" fill="none" stroke="${col}" stroke-width="1.5" vector-effect="non-scaling-stroke"/><circle cx="${e[0]-1.5}" cy="${e[1]}" r="2.2" fill="${col}"/></svg>`}
+let period=store.get("md.period","1D");
+const MKTABS=["Equities","Rates","FX","Credit","Commodities"];let mkSel=store.get("md.mk","Equities");if(!MKTABS.includes(mkSel))mkSel="Equities";
+document.getElementById("markets").addEventListener("click",e=>{const t=e.target.dataset.mk;if(t){mkSel=t;store.set("md.mk",t);renderMarkets()}});
+function renderMarkets(){
+  document.getElementById("earnBlock").hidden=mkSel!=="Equities";
+  document.querySelectorAll("#period button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.p===period));
+  document.getElementById("markets").innerHTML=`<div class="chips cbpick" role="group" aria-label="Asset class">${MKTABS.map(t=>`<button class="chip" data-mk="${t}" aria-pressed="${t===mkSel}">${t}</button>`).join("")}</div>`+GROUPS.filter(g=>g.tab===mkSel).map(g=>`<h2>${g.name}</h2>${g.note?`<p class="sub">${g.note}</p>`:""}<p class="src">${g.src}</p>
+   <div class="panel rows">${g.items.map(([n,tk,base,d,vol])=>{
+     const v=series(tk,base,vol,period),first=v[0],last=v[v.length-1];
+     const chg=g.bp?Math.round(last-first):g.yld?Math.round((last-first)*100):(last/first-1)*100;const c=cls(chg);
+     const txt=g.bp||g.yld?`${sign(chg)} bp`:`${sign(chg.toFixed(2))}%`;
+     const lvl=g.bp?Math.round(last)+(g.name==="Yield spreads"?" bp":""):g.yld?last.toFixed(3)+"%":fmt(last,d);
+     return `<div class="inst"><div class="nm">${n}<span class="tk">${tk}</span></div>
+       <div class="px num"><b>${lvl}</b><span class="chg ${c}">${txt}</span></div>${spark(v,c)}</div>`}).join("")}</div>${g.curve?curvePanel():""}`).join("");
+}
+document.getElementById("period").addEventListener("click",e=>{const p=e.target.dataset.p;if(p){period=p;store.set("md.period",p);renderMarkets()}});
+
+/* ---------- yield curve (sample) ---------- */
+const TENORS=["3M","6M","1Y","2Y","3Y","5Y","7Y","10Y","20Y","30Y"];
+const CURVES={US:[3.85,3.75,3.6,3.52,3.5,3.62,3.8,4.05,4.6,4.65],DE:[1.95,1.95,1.95,2.0,2.1,2.25,2.45,2.65,3.0,3.2],
+  UK:[3.95,3.9,3.8,3.8,3.85,3.95,4.2,4.55,5.15,5.4],JP:[0.45,0.5,0.6,0.95,1.05,1.3,1.5,1.65,2.6,3.2]};
+const CNAME={US:"US Treasuries",DE:"German Bunds",UK:"UK Gilts",JP:"JGBs"};
+const AGO={"1D":"yesterday","1W":"1 week ago","1M":"1 month ago","6M":"6 months ago","1Y":"1 year ago"},MAG={"1D":.04,"1W":.1,"1M":.2,"6M":.45,"1Y":.7};
+let cty=store.get("md.cty","US");
+function curvePanel(){
+  const t=CURVES[cty],r=rng(cty+period),m=MAG[period],s0=(r()-.5)*m*2,tilt=(r()-.5)*m;
+  const prev=t.map((v,i)=>v+s0+tilt*(i/9-.5)+(r()-.5)*m*.4);
+  const W=480,H=220,L=40,R=10,T=12,B=26,all=[...t,...prev];
+  const mn=Math.floor(Math.min(...all)*2)/2,mx=Math.ceil(Math.max(...all)*2)/2;
+  const x=i=>L+i*(W-L-R)/(TENORS.length-1),y=v=>T+(H-T-B)*(1-(v-mn)/(mx-mn));
+  let g="";for(let v=mn;v<=mx+1e-9;v+=.5)g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${v.toFixed(1)}%</text>`;
+  g+=TENORS.map((tn,i)=>`<text x="${x(i)}" y="${H-6}" text-anchor="middle" font-size="11" fill="var(--muted)">${tn}</text>`).join("");
+  const line=a=>a.map((v,i)=>(i?"L":"M")+x(i).toFixed(1)+" "+y(v).toFixed(1)).join("");
+  const s10=Math.round((t[7]-t[3])*100);
+  return `<div class="panel curve"><div class="chips" role="group" aria-label="Country">${Object.keys(CURVES).map(k=>`<button class="chip" data-cty="${k}" aria-pressed="${k===cty}">${CNAME[k]}</button>`).join("")}</div>
+   <svg class="yc" viewBox="0 0 ${W} ${H}" aria-label="${CNAME[cty]} yield curve">${g}
+    <path d="${line(prev)}" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/>
+    <path d="${line(t)}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>${t.map((v,i)=>`<circle cx="${x(i)}" cy="${y(v)}" r="3" fill="var(--accent)"/>`).join("")}</svg>
+   <div class="legend"><span><i></i>Today</span><span><i class="prev"></i>${AGO[period]} (follows the period toggle)</span><span class="num">2s10s ${sign(s10)} bp</span></div></div>`;
+}
+document.getElementById("markets").addEventListener("click",e=>{const k=e.target.dataset.cty;if(k){cty=k;store.set("md.cty",k);renderMarkets()}});
+
+/* ---------- news (sample) ---------- */
+const NEWS=[
+ {t:"14:05",m:"Asia",src:"Nikkei Asia",h:"BoJ board member says a rate hike could come as early as December",rx:[["USD/JPY",-0.92],["Nikkei 225",-1.14],["JGB 10Y","+4 bp"]],w:"A December hike would narrow the US–Japan rate gap, which supports the yen and weighs on exporters."},
+ {t:"11:00",m:"Asia",src:"Finnhub",h:"China September exports beat forecasts as shipments to ASEAN surge",rx:[["USD/CNH",-0.15],["Hang Seng",0.71]],w:"Strong exports ease worries about Chinese growth and reduce pressure for more stimulus."},
+ {t:"09:20",m:"Asia",src:"Finnhub",h:"Bank of Korea holds rate, flags Seoul housing prices as a risk",rx:[["USD/KRW",0.33],["KOSPI",-0.48]],w:"Housing concerns make further cuts less likely, so the easing cycle may be ending."},
+ {t:"08:15",m:"Asia",src:"Finnhub",h:"TSMC monthly revenue jumps on AI accelerator orders",rx:[["TSMC",2.6],["Nasdaq",0.41]],w:"TSMC makes most AI chips, so its sales are an early read on AI spending across the sector."},
+ {t:"20:30",m:"US",src:"CNBC",h:"US core CPI rises 0.3% m/m, in line with consensus",rx:[["Dollar Index",-0.24],["S&P 500",0.62],["UST 2Y","−5 bp"]],w:"No inflation surprise keeps a Fed cut at the next meeting on the table."},
+ {t:"02:10",m:"US",src:"MarketWatch",h:"Fed governor: further cuts appropriate if hiring keeps slowing",rx:[["Dollar Index",-0.31],["Gold",0.85]],w:"Adds to the view that the Fed cares more about jobs than inflation right now."},
+ {t:"19:45",m:"US",src:"Finnhub",h:"JPMorgan beats on trading revenue; raises net interest income outlook",rx:[["JPM",2.9],["S&P 500",0.2]],w:"The largest US bank sets the tone for financials and gives a read on consumer credit health."},
+ {t:"17:00",m:"Europe",src:"Finnhub",h:"ZEW economic sentiment falls more than expected",rx:[["EUR/USD",-0.21],["Euro Stoxx 50",-0.38]],w:"Weaker German investor sentiment raises the odds that the ECB has to cut again."},
+ {t:"14:00",m:"Europe",src:"Finnhub",h:"UK wage growth slows to slowest pace in three years; gilts rally",rx:[["GBP/USD",-0.44],["Gilt 10Y","−7 bp"]],w:"Slower wages are the main thing the BoE needs to see before cutting further."},
+ {t:"13:00",m:"Europe",src:"Finnhub",h:"ASML orders top estimates on AI chip demand",rx:[["ASML",5.3],["Euro Stoxx 50",0.74]],w:"ASML orders show how much chipmakers plan to build, a forward signal for the whole AI supply chain."},
+];
+let newsF=store.get("md.newsF","All");
+function renderNews(){
+  document.getElementById("newsFilter").innerHTML=["All","Asia","US","Europe"].map(r=>`<button class="chip" aria-pressed="${r===newsF}" data-r="${r}">${r}</button>`).join("");
+  const list=NEWS.filter(n=>newsF==="All"||n.m===newsF);
+  document.getElementById("newsList").innerHTML=list.map(n=>`<article class="news">
+    <div class="meta"><span class="mkt">${n.m}</span><span class="num">${n.t} HKT</span><span>${n.src}</span><span>Sample headline</span></div>
+    <h3>${esc(n.h)}</h3>
+    <div class="ai"><b>Why it matters</b>${esc(n.w)}</div>
+    <div class="react">${n.rx.map(([i,v])=>typeof v==="string"?`<span class="rx ${v.startsWith("+")?"up":"down"} num">${i} ${v} <span class="flat">by close</span></span>`:`<span class="rx ${cls(v)} num">${i} ${sign(v.toFixed(2))}% <span class="flat">by close</span></span>`).join("")}</div></article>`).join("");
+}
+document.getElementById("newsFilter").addEventListener("click",e=>{const r=e.target.dataset.r;if(r){newsF=r;store.set("md.newsF",r);renderNews()}});
+
+/* ---------- calendar (sample) ---------- */
+/* row: time, country, event, previous, consensus, actual, surprise(1 beat/-1 miss/0 in line/null), why, rate decision? */
+const ECO=[
+ ["Wed 14 Oct",[["17:00","DE","ZEW economic sentiment","39.3","35.0","31.5",-1,"Survey of German investors; an early read on Europe's largest economy."],
+   ["20:30","US","CPI y/y","2.9%","3.0%","",null,"Headline inflation. The single biggest driver of Fed expectations and Treasury yields."],
+   ["20:30","US","Core CPI m/m","0.3%","0.3%","",null,"Inflation without food and energy. The Fed watches this more than the headline number."]]],
+ ["Thu 15 Oct",[["08:30","AU","Employment change","24.5K","20.0K","",null,"Jobs data is a key input for RBA rate decisions; moves AUD/USD."],
+   ["20:30","US","Retail sales m/m","0.6%","0.4%","",null,"Consumer spending is about two thirds of US GDP."],
+   ["20:30","US","PPI m/m","0.1%","0.2%","",null,"Producer prices. Feeds into the Fed's preferred inflation gauge (PCE)."],
+   ["20:30","US","Initial jobless claims","228K","230K","",null,"Weekly layoffs count. The most up-to-date signal on the US job market."]]],
+ ["Fri 16 Oct",[["10:00","CN","GDP y/y (Q3)","5.2%","4.8%","",null,"China's quarterly growth. Moves the Hang Seng, CNH, AUD and commodities."],
+   ["10:00","CN","Industrial production y/y","5.2%","5.0%","",null,"Factory output; shows whether Chinese manufacturing is holding up."],
+   ["10:00","CN","Retail sales y/y","3.0%","3.2%","",null,"Chinese consumer demand, a weak spot the government is trying to fix."],
+   ["22:00","US","UMich consumer sentiment (prelim.)","55.1","55.0","",null,"Household mood and inflation expectations, which the Fed watches closely."]]],
+ ["Tue 20 Oct",[["09:00","CN","1Y & 5Y Loan Prime Rate","3.00%","3.00%","",null,"China's benchmark lending rates. A cut signals more monetary support."]]],
+ ["Wed 21 Oct",[["08:00","KR","Exports, first 20 days y/y","12.7%","9.0%","",null,"Korea ships so many chips that this is an early read on global tech demand."],
+   ["14:00","GB","CPI y/y","3.8%","3.7%","",null,"UK inflation. Decides how fast the BoE can cut; moves gilts and sterling."]]],
+ ["Thu 22 Oct",[["09:00","KR","Bank of Korea rate decision","2.50%","2.50%","",null,"Policy rate for Korea. Moves USD/KRW and the KOSPI.",1],
+   ["20:30","US","Initial jobless claims","230K","232K","",null,"Weekly layoffs count. The most up-to-date signal on the US job market."]]],
+ ["Fri 23 Oct",[["07:30","JP","National core CPI y/y","2.7%","2.8%","",null,"Japan inflation. Sticky prices support another BoJ hike."],
+   ["16:00","EU","Flash manufacturing & services PMI","49.8","50.0","",null,"First survey of the month on euro-area business activity. Above 50 means growth."],
+   ["21:45","US","Flash S&P Global PMI","53.6","53.3","",null,"Early read on US business activity before official data."]]],
+ ["Tue 27 Oct",[["22:00","US","Conference Board consumer confidence","94.2","93.5","",null,"Consumer outlook, including how easy people find it to get a job."]]],
+ ["Wed 28 Oct",[["08:30","AU","Trimmed mean CPI q/q (Q3)","0.7%","0.8%","",null,"The RBA's preferred inflation measure. The biggest AUD event of the quarter."]]],
+ ["Thu 29 Oct",[["02:00","US","FOMC rate decision","3.75–4.00%","3.50–3.75%","",null,"The Fed's rate decision and press conference. Moves every asset class.",1],
+   ["20:30","US","GDP q/q annualised (Q3 advance)","3.8%","2.0%","",null,"First estimate of US growth for the quarter."],
+   ["21:15","EU","ECB rate decision","2.00%","2.00%","",null,"Euro-area policy rate and press conference. Moves EUR/USD and Bunds.",1]]],
+ ["Fri 30 Oct",[["11:00","JP","BoJ rate decision (approx. time)","0.50%","0.50%","",null,"Any hint of a hike moves the yen sharply and can ripple through global bonds.",1],
+   ["18:00","EU","Flash HICP y/y","2.2%","2.1%","",null,"Euro-area inflation. The ECB's main target."],
+   ["20:30","US","Core PCE m/m","0.2%","0.2%","",null,"The Fed's preferred inflation measure."]]],
+ ["Sat 31 Oct",[["09:30","CN","Official manufacturing PMI","49.8","49.6","",null,"Government survey of Chinese factories. Below 50 means contraction."]]],
+];
+const ECO_PAST=[
+ ["Wed 30 Sep",[["09:30","CN","Official manufacturing PMI","49.4","49.6","49.8",1,"Government survey of Chinese factories. Below 50 means contraction."]]],
+ ["Thu 1 Oct",[["16:00","EU","Final manufacturing PMI","50.7","49.5","49.8",1,"Final reading of euro-area factory activity."],
+   ["22:00","US","ISM manufacturing PMI","48.7","49.0","49.1",1,"The main US factory survey; its prices index is a closely watched inflation signal."]]],
+ ["Fri 2 Oct",[["17:00","EU","Flash HICP y/y","2.0%","2.2%","2.2%",0,"Euro-area inflation. The ECB's main target."],
+   ["20:30","US","Nonfarm payrolls","22K","50K","35K",-1,"The monthly US jobs report. Usually the biggest data release of the month."],
+   ["20:30","US","Unemployment rate","4.3%","4.3%","4.4%",-1,"A rising jobless rate pushes the Fed toward more cuts."]]],
+ ["Mon 5 Oct",[["22:00","US","ISM services PMI","52.0","51.7","50.6",-1,"Services are most of the US economy; this survey is an early read on them."]]],
+ ["Tue 6 Oct",[["11:30","AU","RBA rate decision","3.60%","3.60%","3.60%",0,"Australia's policy rate. Moves AUD/USD and Australian bonds.",1]]],
+ ["Thu 8 Oct",[["02:00","US","FOMC meeting minutes","–","–","Released",null,"Detailed record of the last Fed meeting; shows how divided policymakers are."],
+   ["14:00","TH","Bank of Thailand rate decision","1.50%","1.50%","1.50%",0,"Thailand's policy rate. Moves the baht and Thai equities.",1]]],
+ ["Fri 9 Oct",[["22:00","US","UMich consumer sentiment (final)","55.4","55.0","55.1",0,"Household mood and inflation expectations, which the Fed watches closely."]]],
+ ["Tue 13 Oct",[["11:00","CN","Exports y/y","4.4%","6.0%","8.3%",1,"China's trade data; strong exports support CNH and Asian equities."],
+   ["14:00","GB","Unemployment rate","4.8%","4.8%","4.9%",-1,"UK jobs data. Weakness gives the BoE room to cut."]]],
+];
+const EARN=[["Wed 14 Oct","ASML","ASML Holding","AI / semis","Before open","€5.40"],["Wed 14 Oct","JPM","JPMorgan Chase","Financials","Before open","$4.85"],["Wed 14 Oct","GS","Goldman Sachs","Financials","Before open","$11.20"],["Wed 14 Oct","WFC","Wells Fargo","Financials","Before open","$1.55"],
+ ["Thu 15 Oct","2330.TW","TSMC","AI / semis","After TW close","NT$15.20"],["Thu 15 Oct","MS","Morgan Stanley","Financials","Before open","$2.10"],["Thu 15 Oct","BAC","Bank of America","Financials","Before open","$0.95"],["Sat 17 Oct","HDFCBANK.NS","HDFC Bank","Financials","During IN day","₹22.50"],
+ ["Wed 21 Oct","VRT","Vertiv","AI / data-centre power","Before open","$1.05"],["Wed 21 Oct","TSLA","Tesla","AI / autonomy","After close","$0.55"],["Thu 22 Oct","SAP","SAP","AI / software","After close","€1.70"],
+ ["Thu 22 Oct","000660.KS","SK Hynix","AI / memory","Before KR open","₩11,200"],["Tue 27 Oct","0005.HK","HSBC","Financials","Before HK open","$0.38"],["Wed 28 Oct","MSFT","Microsoft","AI / cloud","After close","$3.70"],["Wed 28 Oct","GOOGL","Alphabet","AI / cloud","After close","$2.30"],
+ ["Wed 28 Oct","META","Meta Platforms","AI","After close","$6.70"],["Wed 28 Oct","6857.T","Advantest","AI / semis","After JP close","¥95"],["Thu 29 Oct","005930.KS","Samsung Electronics","AI / memory","Before KR open","₩1,350"],
+ ["Thu 29 Oct","AAPL","Apple","AI / devices","After close","$1.75"],["Thu 29 Oct","AMZN","Amazon","AI / cloud","After close","$1.55"],["Fri 30 Oct","8035.T","Tokyo Electron","AI / semis","After JP close","¥420"]];
+const TRACKED=[["AI",[["NVDA","Nvidia"],["MSFT","Microsoft"],["GOOGL","Alphabet"],["AMZN","Amazon"],["META","Meta"],["AVGO","Broadcom"],["AMD","AMD"],["ORCL","Oracle"],["PLTR","Palantir"],["MU","Micron"],["AAPL","Apple"],["TSLA","Tesla"],["CRM","Salesforce"],["SAP","SAP"],["0700.HK","Tencent"],
+   ["ARM","Arm Holdings"],["MRVL","Marvell"],["ANET","Arista Networks"],["VRT","Vertiv"],["DELL","Dell Technologies"],
+   ["ASML","ASML"],["SU.PA","Schneider Electric"],["2330.TW","TSMC"],["2317.TW","Hon Hai (Foxconn)"],["2382.TW","Quanta Computer"],["2454.TW","MediaTek"],["005930.KS","Samsung Electronics"],["000660.KS","SK Hynix"],
+   ["9988.HK","Alibaba"],["9888.HK","Baidu"],["9984.T","SoftBank Group"],["8035.T","Tokyo Electron"],["6857.T","Advantest"],["6146.T","Disco"],["5803.T","Fujikura"],["0981.HK","SMIC"]]],
+ ["Financials",[["JPM","JPMorgan"],["BAC","Bank of America"],["GS","Goldman Sachs"],["MS","Morgan Stanley"],["WFC","Wells Fargo"],["BLK","BlackRock"],["0005.HK","HSBC"],["1299.HK","AIA"],["HDFCBANK.NS","HDFC Bank"]]]];
+const CTRY={US:"United States",DE:"Germany",AU:"Australia",CN:"China",GB:"United Kingdom",EU:"Euro area",JP:"Japan",KR:"South Korea",TH:"Thailand"};
+/* market reaction from just before the release to that market's close (sample) */
+const CRX={
+ "Wed 30 Sep|Official manufacturing PMI":[["USD/CNH",-0.12],["Hang Seng",0.85],["AUD/USD",0.2]],
+ "Thu 1 Oct|Final manufacturing PMI":[["EUR/USD",0.08],["Euro Stoxx 50",0.15]],
+ "Thu 1 Oct|ISM manufacturing PMI":[["S&P 500",0.34],["UST 2Y","+2 bp"]],
+ "Fri 2 Oct|Flash HICP y/y":[["EUR/USD",0.05],["Bund 10Y","−1 bp"]],
+ "Fri 2 Oct|Nonfarm payrolls":[["Dollar Index",-0.46],["UST 2Y","−9 bp"],["Gold",1.1],["S&P 500",0.28]],
+ "Mon 5 Oct|ISM services PMI":[["Dollar Index",-0.22],["UST 10Y","−4 bp"],["S&P 500",-0.18]],
+ "Tue 6 Oct|RBA rate decision":[["AUD/USD",0.31],["ASX 200",-0.2]],
+ "Thu 8 Oct|FOMC meeting minutes":[["Dollar Index",0.1],["UST 2Y","+1 bp"]],
+ "Thu 8 Oct|Bank of Thailand rate decision":[["USD/THB",-0.25],["SET Index",0.4]],
+ "Fri 9 Oct|UMich consumer sentiment (final)":[["S&P 500",-0.15]],
+ "Tue 13 Oct|Exports y/y":[["USD/CNH",-0.18],["Hang Seng",1.05],["AUD/USD",0.35]],
+ "Tue 13 Oct|Unemployment rate":[["GBP/USD",-0.38],["Gilt 10Y","−6 bp"]],
+ "Wed 14 Oct|ZEW economic sentiment":[["EUR/USD",-0.21],["Euro Stoxx 50",-0.38]],
+};
+const rxChips=rx=>`<div class="react" style="margin-top:6px">${rx.map(([i,v])=>typeof v==="string"?`<span class="rx ${v.startsWith("+")?"up":"down"} num">${i} ${v}</span>`:`<span class="rx ${cls(v)} num">${i} ${sign(v.toFixed(2))}%</span>`).join("")}<span class="flat" style="font-size:12px;align-self:center">by close</span></div>`;
+let calWin=store.get("md.calWin","next");
+document.getElementById("ecoTbl").addEventListener("click",e=>{const r=e.target.closest("tr.ev");if(!r)return;const k=r.dataset.k;
+  if(calAll){calAll=false;document.querySelectorAll("#ecoTbl tr.ev").forEach(x=>calOpen.add(x.dataset.k))}
+  calOpen.has(k)?calOpen.delete(k):calOpen.add(k);renderCal()});
+document.getElementById("calAll").addEventListener("click",()=>{calAll=!calAll;calOpen.clear();renderCal()});
+document.getElementById("calWin").addEventListener("click",e=>{const w=e.target.dataset.w;if(w){calWin=w;store.set("md.calWin",w);renderCal()}});
+/* ticker: [revenue est., EPS actual, revenue actual, EPS surprise, revenue surprise] (sample) */
+const EREV={"ASML":["€7.6B","€5.62","€7.9B",1,1],"JPM":["$44.9B","$5.07","$46.4B",1,1],"GS":["$14.1B","$11.05","$13.8B",-1,-1],"WFC":["$21.1B","$1.58","$21.2B",1,0],
+ "2330.TW":["NT$1.0T"],"HDFCBANK.NS":["₹880B"],"0005.HK":["$16.6B"],"MS":["$16.8B"],"BAC":["$27.4B"],"NFLX":["$11.5B"],"TSLA":["$26.0B"],"SAP":["€9.2B"],"000660.KS":["₩24.5T"],"MSFT":["$75.3B"],"GOOGL":["$99.0B"],
+ "META":["$49.4B"],"6857.T":["¥260B"],"005930.KS":["₩86T"],"AAPL":["$102B"],"AMZN":["$178B"],"8035.T":["¥620B"]};
+const surp=s=>s===undefined?"":s===0?` <span class="surp flat">in line</span>`:` <span class="surp ${s>0?"up":"down"}">${s>0?"beat":"miss"}</span>`;
+/* indicator guide: [what it measures, why markets care, what to watch] — written once per indicator */
+const DESC={
+ "DE|ZEW economic sentiment":["A monthly survey of about 300 financial analysts and investors on where they expect the German economy to be in six months. Positive = more optimists than pessimists.","It is one of the first sentiment readings each month for Europe's largest economy, so it often sets the tone for the euro and European equities before harder data arrives.","The 'current conditions' sub-index is a better read on today's economy. A big drop usually raises bets on ECB easing and weighs on EUR/USD."],
+ "US|CPI y/y":["The change in the prices of a fixed basket of consumer goods and services over the past 12 months, published by the Bureau of Labor Statistics.","It is the most market-moving inflation number in the world. A surprise shifts expectations for Fed rate cuts, which feeds directly into Treasury yields, the dollar, equities and gold.","Markets usually react more to the core m/m figure than to this headline. Energy prices can swing the headline sharply."],
+ "US|Core CPI m/m":["Monthly change in consumer prices excluding food and energy, which are volatile. Reported to one decimal place, so 0.2% vs 0.3% is a big deal.","The Fed treats core as the better guide to underlying inflation. A 0.1 pp surprise can move the 2-year Treasury yield by 5–10 bp.","Watch shelter (housing) costs, which are about a third of the index, and 'supercore' services excluding housing, which the Fed tracks for wage-driven inflation."],
+ "AU|Employment change":["The number of jobs added or lost in Australia during the month, from the Australian Bureau of Statistics' labour force survey.","The RBA's decisions depend heavily on whether the job market is tight. Strong jobs data reduces rate-cut odds and lifts AUD/USD.","The survey is noisy, so look at the unemployment rate and the split between full-time and part-time jobs alongside the headline."],
+ "US|Retail sales m/m":["The monthly change in the dollar value of sales at US retailers and restaurants. Not adjusted for inflation.","Consumer spending drives about two thirds of US GDP, so this is a key test of whether the economy is slowing.","The 'control group' (excluding autos, gas, building materials and food services) feeds directly into GDP and matters most to economists."],
+ "US|PPI m/m":["Monthly change in prices received by US producers for goods and services, i.e. inflation at the wholesale level.","Some PPI components (like airfares and portfolio management fees) feed into the PCE inflation measure the Fed targets, so economists use it to estimate PCE.","Usually less market-moving than CPI, but a big surprise can shift expectations for core PCE."],
+ "US|Initial jobless claims":["The number of people filing for unemployment benefits for the first time in the past week.","It is the most timely signal of layoffs in the US. A sustained rise above about 250K would suggest the job market is weakening.","Look at the 4-week average to smooth out holidays and weather effects. Continuing claims show whether laid-off workers are finding new jobs."],
+ "CN|GDP y/y (Q3)":["China's total economic output in the quarter compared with a year earlier, from the National Bureau of Statistics.","China is the world's second-largest economy and the biggest buyer of many commodities, so its growth affects Asian equities, the yuan, AUD and metal prices.","Markets compare it with the government's annual target (around 5%). The quarter-on-quarter figure shows momentum better."],
+ "CN|Industrial production y/y":["Year-on-year growth in output from China's factories, mines and utilities.","Shows whether China's manufacturing engine is holding up, which matters for commodities and Asian supply chains.","Released together with retail sales and fixed-asset investment as the monthly 'activity data'. Watch the gap between strong supply and weak demand."],
+ "CN|Retail sales y/y":["Year-on-year growth in the value of goods sold to Chinese consumers.","Weak consumer spending is China's biggest economic problem, so this is watched for signs that stimulus is working.","Car and appliance sales are boosted by government trade-in subsidies; a fading boost would show up here first."],
+ "US|UMich consumer sentiment (prelim.)":["A University of Michigan survey of about 500 US households on their finances and the economy, plus their expectations for inflation.","The inflation expectations figures (1-year and 5–10 year) are closely watched by the Fed because expectations can become self-fulfilling.","The preliminary reading comes mid-month and can be revised in the final reading two weeks later."],
+ "CN|1Y & 5Y Loan Prime Rate":["China's benchmark lending rates, set monthly by 20 banks under PBoC guidance. The 5-year rate is the reference for mortgages.","A cut signals more monetary support for the economy and the property market, which can lift Chinese equities and weaken the yuan.","Usually follows changes in the PBoC's 7-day reverse repo rate. A 5-year-only cut targets housing."],
+ "KR|Exports, first 20 days y/y":["Korean exports in the first 20 days of the month compared with the same period a year earlier, from Korea Customs.","Korea is a major exporter of memory chips, so this is the earliest hard data on global tech and AI demand each month.","Look at the semiconductor line and adjust for differences in working days between years."],
+ "GB|CPI y/y":["UK consumer price inflation over the past 12 months, from the Office for National Statistics.","UK inflation has been higher than in the US and Europe, so it decides how fast the BoE can cut. Surprises move gilts and sterling sharply.","Services inflation is the measure the BoE watches most for domestic price pressure."],
+ "KR|Bank of Korea rate decision":["The Bank of Korea's decision on its base rate, followed by a press conference by the Governor.","Moves USD/KRW and Korean bond yields; a cut can support the KOSPI.","Watch how many board members favour a cut in the next three months, which the Governor reveals at the press conference."],
+ "JP|National core CPI y/y":["Japan's consumer price inflation excluding fresh food, over the past 12 months.","Sustained inflation near or above 2% supports further BoJ rate hikes, which strengthen the yen.","The Tokyo CPI, released about three weeks earlier, is a good preview. Also watch the index excluding fresh food and energy."],
+ "EU|Flash manufacturing & services PMI":["Surveys of purchasing managers at about 5,000 euro-area companies on output, orders, prices and hiring. Above 50 means expansion.","It is the first indicator of each month's activity, released before the month ends, so it can move EUR/USD and Bunds.","The services PMI matters more for the ECB because of its link to wages and inflation. The prices-charged sub-index is an early inflation signal."],
+ "US|Flash S&P Global PMI":["Early-month survey of US manufacturing and service companies by S&P Global. Above 50 means expansion.","Gives a first read on the current month's activity, weeks before official data.","Usually less market-moving than the ISM surveys, but useful for spotting turning points."],
+ "US|Conference Board consumer confidence":["A survey of US households on current business and job conditions and their six-month outlook.","Tracks consumers' willingness to spend, which drives most of the US economy.","The 'labour differential' (jobs plentiful minus jobs hard to get) closely tracks the unemployment rate."],
+ "AU|Trimmed mean CPI q/q (Q3)":["Quarterly Australian inflation excluding the most extreme price moves at both ends. It is the RBA's preferred measure of underlying inflation.","It is the biggest data point for the RBA's rate decisions, so a surprise moves AUD/USD and Australian bonds sharply.","The RBA's target band is 2–3% annual. Compare the result with the RBA's own forecast in its latest Statement on Monetary Policy."],
+ "US|FOMC rate decision":["The Federal Reserve's decision on the federal funds target range, with a statement and the Chair's press conference 30 minutes later.","The most important event for global markets: it sets the price of money in dollars and moves every asset class.","Beyond the decision, watch statement wording changes, any dissents, and the Chair's hints about the next meeting. Updated projections ('dot plot') come out at 4 of the 8 meetings."],
+ "US|GDP q/q annualised (Q3 advance)":["The first estimate of US economic growth in the quarter, expressed as an annual rate.","Confirms whether the economy is growing fast enough to keep unemployment low.","Final sales to private domestic purchasers (excluding inventories, trade and government) is a cleaner measure of underlying demand."],
+ "EU|ECB rate decision":["The European Central Bank's decision on the deposit facility rate, followed by the President's press conference.","Sets borrowing costs for the euro area; moves EUR/USD, Bunds and peripheral bond spreads such as Italy's.","Staff projections come out four times a year (March, June, September, December). Listen for whether the President says policy is 'in a good place'."],
+ "JP|BoJ rate decision (approx. time)":["The Bank of Japan's decision on its short-term policy rate. The release time varies, usually around midday Tokyo time, followed by the Governor's press conference.","Japan is one of the few major economies raising rates, so any hint of a hike moves the yen and can ripple through global bond markets.","The Outlook Report with updated forecasts comes out four times a year. The number of board members dissenting is a clue to the next move."],
+ "EU|Flash HICP y/y":["The first estimate of euro-area consumer price inflation for the month, from Eurostat.","Inflation relative to the ECB's 2% target is the main driver of ECB decisions.","Core and services inflation matter more than headline. Germany, France, Italy and Spain publish their own figures earlier, which help predict it."],
+ "US|Core PCE m/m":["Monthly change in the personal consumption expenditures price index excluding food and energy, from the Bureau of Economic Analysis.","This is the inflation measure the Fed officially targets at 2%.","Usually well forecast because economists can estimate it from CPI and PPI, so surprises are rare but powerful."],
+ "CN|Official manufacturing PMI":["The government's survey of about 3,000 Chinese manufacturers. Above 50 means activity is expanding.","The first official read on China's economy each month, so it moves Asian markets, the yuan and commodities.","New export orders show external demand. The private Caixin/S&P PMI, released a day later, covers smaller, more export-focused firms."],
+ "EU|Final manufacturing PMI":["The final reading of the euro-area manufacturing purchasing managers' survey for the month.","Confirms or revises the flash estimate, so it usually moves markets only if there is a big revision.","Compare the country breakdown: Germany has been the weak spot for euro-area industry."],
+ "US|ISM manufacturing PMI":["The Institute for Supply Management's survey of US factory purchasing managers. Above 50 means expansion.","The longest-running US business survey and a reliable signal of the industrial cycle.","The prices-paid index is an early inflation signal; new orders lead production."],
+ "US|Nonfarm payrolls":["The number of jobs added or lost outside farming in the past month, from the Bureau of Labor Statistics' survey of employers. Released with the unemployment rate.","Usually the biggest data release of the month. It is a direct test of the Fed's employment mandate and moves every asset class.","Revisions to the previous two months often matter as much as the headline. Average hourly earnings show wage pressure."],
+ "US|Unemployment rate":["The share of the US labour force that is jobless and looking for work, from a household survey.","A rising rate is the clearest sign the job market is weakening and pushes the Fed toward cuts. A rise of 0.5 pp from the low has historically signalled recession (the 'Sahm rule').","Check whether the rise is from layoffs or from more people entering the workforce."],
+ "US|ISM services PMI":["The ISM survey of US service-sector companies, which make up most of the economy. Above 50 means expansion.","Services drive US growth and much of inflation, so this is closely watched for both.","The prices-paid index is a key read on services inflation."],
+ "AU|RBA rate decision":["The Reserve Bank of Australia's decision on the cash rate, followed by the Governor's press conference.","Moves AUD/USD and Australian bond yields.","The RBA publishes updated forecasts four times a year, in February, May, August and November."],
+ "US|FOMC meeting minutes":["The detailed record of the last Fed meeting, released three weeks later.","Shows how divided policymakers are and the arguments behind the decision, which can shift expectations for the next meeting.","Look for words like 'many', 'most' or 'a few' participants, which show how widely a view is held."],
+ "TH|Bank of Thailand rate decision":["The Bank of Thailand's Monetary Policy Committee decision on the policy rate.","Moves the baht and Thai bonds and equities.","The vote split shows how close the committee is to the next move."],
+ "US|UMich consumer sentiment (final)":["The final monthly reading of the University of Michigan household survey.","Revisions to inflation expectations from the preliminary reading are what markets focus on.","Compare the 5–10 year inflation expectation with its long-run range of about 2.5–3%."],
+ "CN|Exports y/y":["Year-on-year change in the value of China's exports in US dollars.","Shows global demand for Chinese goods and the effect of tariffs; strong exports support the yuan and Asian equities.","Watch exports by destination (US vs ASEAN vs EU) to see how trade is being rerouted."],
+ "GB|Unemployment rate":["The share of the UK labour force that is jobless, measured over three months.","The BoE needs a looser labour market to bring services inflation down, so a rise supports rate cuts.","Wage growth, released at the same time, is often more market-moving than unemployment itself."],
+};
+const calOpen=new Set();let calAll=false;
+function renderCal(){
+  document.querySelectorAll("#calWin button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.w===calWin));
+  document.getElementById("calAll").setAttribute("aria-pressed",calAll);
+  document.getElementById("calAll").textContent=calAll?"Collapse all":"Expand all";
+  const past=calWin==="past";
+  document.getElementById("ecoTbl").innerHTML=`<thead><tr><th>HKT</th><th>Country</th><th>Event</th><th class="r">Prev.</th><th class="r">Cons.</th><th class="r">Actual</th><th>Reaction by close</th></tr></thead><tbody>`+
+   (past?ECO_PAST:ECO).map(([d,rows])=>`<tr class="day"><td colspan="7">${d}</td></tr>`+rows.map(([t,c,e,p,f,a,s,why,rd])=>{
+    const k=d+"|"+e,open=calAll||calOpen.has(k),ds=DESC[c+"|"+e],rx=CRX[k];
+    return `<tr class="ev" data-k="${esc(k)}" aria-expanded="${open}"><td class="num">${t}</td><td class="ctry">${CTRY[c]||c}</td>
+     <td class="evn"><span class="car">${open?"▾":"▸"}</span>${e}${rd?`<span class="rtag">Rate decision</span>`:""}</td>
+     <td class="r num">${p}</td><td class="r num">${f}</td>
+     <td class="r num nw">${a?`${a}${s===null?"":s===0?` <span class="surp flat">in line</span>`:` <span class="surp ${s>0?"up":"down"}">${s>0?"beat":"miss"}</span>`}`:`<span class="flat">–</span>`}</td>
+     <td class="rxc">${rx?rx.slice(0,2).map(([i,v])=>typeof v==="string"?`<span class="rx ${v.startsWith("+")?"up":"down"} num">${i} ${v}</span>`:`<span class="rx ${cls(v)} num">${i} ${sign(v.toFixed(2))}%</span>`).join(""):`<span class="flat">–</span>`}</td></tr>
+     <tr class="det"${open?"":" hidden"}><td colspan="7"><div class="detail">
+      <p class="lead">${why}</p>
+      ${ds?`<div class="dgrid"><div><div class="lbl">What it measures</div>${ds[0]}</div><div><div class="lbl">Why markets care</div>${ds[1]}</div><div><div class="lbl">What to watch</div>${ds[2]}</div></div>`:""}
+      ${rx?`<div><div class="lbl">Market reaction by close</div>${rxChips(rx)}</div>`:""}
+     </div></td></tr>`}).join("")).join("")+`</tbody>`;
+  const earnRows=rows=>`<thead><tr><th>Date</th><th>Company</th><th>When</th><th class="r">EPS est.</th><th class="r">EPS actual</th><th class="r">Revenue est.</th><th class="r">Revenue actual</th></tr></thead><tbody>`+
+   rows.map(([d,t,n,th,w,e])=>{const [re,ea,ra,se,sr]=EREV[t]||["–"];const pend=`<span class="flat">pending</span>`;
+    return `<tr><td>${d}</td><td><b>${n}</b> <span class="flat num">${t}</span>${th!=="Financials"?`<div style="margin-top:3px"><span class="tag">${th}</span></div>`:""}</td><td>${w}</td>
+     <td class="r num">${e}</td><td class="r num">${ea?ea+surp(se):pend}</td><td class="r num">${re}</td><td class="r num">${ra?ra+surp(sr):pend}</td></tr>`}).join("")+`</tbody>`;
+  document.getElementById("earnTech").innerHTML=earnRows(EARN.filter(r=>r[3]!=="Financials"));
+  document.getElementById("earnFin").innerHTML=earnRows(EARN.filter(r=>r[3]==="Financials"));
+  document.getElementById("tracked").innerHTML=TRACKED.map(([g,l])=>`<div><h4>${g} (${l.length})</h4><ul>${l.map(([t,n])=>`<li>${n} <span class="num">${t}</span></li>`).join("")}</ul></div>`).join("");
+}
+
+/* ---------- central banks (sample) ---------- */
+const CB=[
+ {n:"Federal Reserve",r:"3.75–4.00%",nx:"2026-10-29",path:[3.875,3.68,3.52,3.40,3.31],proj:[["Median dot, end-2026","3.6%"],["Median dot, end-2027","3.1%"],["Longer run","3.0%"],["Core PCE 2026","3.1%"]],
+  q:[["dove","Governor speech","Labour market cooling argues for further easing."],["hawk","Regional president remarks","Inflation still too high to cut quickly."]]},
+ {n:"European Central Bank",r:"2.00%",nx:"2026-10-29",path:null,proj:[["HICP 2026 (staff)","1.7%"],["HICP 2027 (staff)","1.9%"],["GDP 2026 (staff)","1.2%"]],
+  q:[["neu","Executive Board speech","Policy is in a good place; data-dependent."],["hawk","Governing Council member","No case for more cuts with services inflation sticky."]]},
+ {n:"Bank of Japan",r:"0.50%",nx:"2026-10-30",path:null,proj:[["Core CPI FY2026 (median)","2.0%"],["Real GDP FY2026","0.7%"]],
+  q:[["hawk","Board member speech","Conditions for another hike are falling into place."]]},
+ {n:"Bank of England",r:"4.00%",nx:"2026-11-05",path:null,proj:[["CPI, 1 year ahead (MPR)","3.0%"],["GDP 2026 (MPR)","1.0%"]],
+  q:[["dove","MPC member speech","Wage growth easing faster than expected."]]},
+ {n:"People's Bank of China",r:"1.40% (7-day reverse repo)",nx:"2026-10-20",nxl:"Next LPR fixing",path:null,proj:null,
+  q:[["dove","PBoC statement","Will keep liquidity reasonably ample."]]},
+ {n:"Reserve Bank of Australia",r:"3.60%",nx:"2026-11-03",path:null,proj:[["Trimmed mean CPI, Dec 2026 (SMP)","2.6%"],["Unemployment, Dec 2026","4.3%"]],
+  q:[["neu","Governor remarks","Board remains cautious; watching the labour market."]]},
+ {n:"Bank of Korea",r:"2.50%",nx:"2026-10-22",path:null,proj:[["CPI 2026 (forecast)","2.1%"],["GDP 2026 (forecast)","1.6%"]],
+  q:[["neu","Governor press conference","Easing bias kept, but housing and FX limit the pace."]]},
+ {n:"Bank of Thailand",r:"1.50%",nx:"2026-12-16",path:null,proj:[["Headline inflation 2026","0.5%"],["GDP 2026","2.0%"]],
+  q:[["dove","MPC statement","Room to support growth given low inflation."]]},
+];
+/* commentary (sample paraphrases): [tone, type, date, speaker role, summary, key points, votes this year?] */
+const COMM={
+ "Federal Reserve":[
+  ["dove","Speech","13 Oct","Governor","Labour market cooling argues for further easing.",["Hiring has slowed below the pace needed to keep unemployment steady","Sees tariff effects on prices as one-off, not lasting","Supports another 25 bp cut at the October meeting"],1],
+  ["hawk","Speech","10 Oct","Regional Fed president","Inflation is still too high to keep cutting quickly.",["Core inflation has been above 2% for more than four years","Would prefer to pause and judge the effect of earlier cuts","Concerned that inflation expectations could drift higher"],1],
+  ["neu","Minutes","8 Oct","FOMC minutes (September meeting)","Most officials backed the September cut but were split on what comes next.",["A majority saw more easing this year as likely appropriate","Several flagged upside inflation risks from tariffs","Early discussion of ending balance-sheet runoff"]],
+  ["dove","Interview","6 Oct","Vice Chair","Risks to employment now outweigh risks to inflation.",["Job openings are back to pre-pandemic levels","Policy is still somewhat restrictive","Gradual cuts would move rates toward neutral"],1],
+  ["neu","Press conference","18 Sep","Chair","Called the cut 'risk management' and stressed there is no preset course.",["Decisions will be made meeting by meeting","Labour-market downside risks have risen","Inflation expected to stay elevated into next year"],1]],
+ "European Central Bank":[
+  ["neu","Speech","12 Oct","President","Policy is in a good place; no urgency to move either way.",["Inflation near the 2% target","Growth risks more balanced than in the spring","Will respond if the outlook changes materially"]],
+  ["hawk","Speech","9 Oct","Governing Council member (national governor)","No case for more cuts while services inflation stays sticky.",["Services inflation still above 3%","Wage growth slowing but from a high level","Bar for another cut is high"]],
+  ["neu","Accounts","9 Oct","Account of the September meeting","Broad agreement to hold; some saw inflation undershooting in 2027.",["Euro strength noted as a drag on inflation","Members kept all options open for coming meetings"]],
+  ["dove","Interview","2 Oct","Executive Board member","Door remains open to a cut if growth weakens.",["Industrial weakness in Germany a concern","Inflation undershoot is now the bigger risk"]]],
+ "Bank of Japan":[
+  ["hawk","Speech","9 Oct","Board member","Conditions for another hike are falling into place.",["Firms continue to pass on higher costs","Real interest rates remain deeply negative","Waiting too long risks a weaker yen and more inflation"]],
+  ["neu","Speech","3 Oct","Deputy Governor","Timing of the next hike depends on wage momentum.",["Spring wage talks will be a key input","US tariff effects on exporters still being assessed"]],
+  ["hawk","Summary of Opinions","30 Sep","September meeting, board members' views","Several members argued the hiking pace could pick up.",["One member proposed a hike at the September meeting","Underlying inflation seen close to 2%"]],
+  ["neu","Press conference","19 Sep","Governor","Will keep raising rates if the outlook is realised, without rushing.",["No preset timing for the next move","Watching global growth and market volatility"]]],
+ "Bank of England":[
+  ["dove","Speech","13 Oct","MPC member","Wage growth is easing faster than expected.",["Labour market has loosened noticeably","Restrictive policy no longer needed at this level","Favours a cut in November"]],
+  ["hawk","Speech","7 Oct","MPC member","Inflation persistence argues for holding rates.",["Food and services prices still rising quickly","Household inflation expectations have edged up"]],
+  ["neu","Speech","1 Oct","Governor","Further cuts likely but must be gradual and careful.",["Disinflation is on track","Uncertainty about how persistent inflation is remains high"]],
+  ["neu","Minutes","18 Sep","September MPC minutes","Voted 7–2 to hold; two members wanted a cut.",["Majority wanted more evidence on inflation","Balance-sheet run-off pace reduced"]]],
+ "People's Bank of China":[
+  ["dove","Statement","30 Sep","Q3 Monetary Policy Committee meeting","Will step up counter-cyclical adjustment.",["Keep liquidity reasonably ample","Guide lending rates lower for firms and households"]],
+  ["dove","Speech","24 Sep","Governor","There is still room to cut banks' reserve requirement ratio.",["Support for property and consumption","Policy tools coordinated with fiscal stimulus"]],
+  ["neu","Press briefing","15 Sep","Deputy Governor","Will keep the yuan basically stable at a reasonable level.",["Firmly against one-way bets on the currency","Cross-border flows broadly balanced"]]],
+ "Reserve Bank of Australia":[
+  ["neu","Press conference","6 Oct","Governor","Held at 3.60%; the board is cautious and watching the labour market.",["Inflation in the target band but services still firm","No signal on timing of the next cut"]],
+  ["hawk","Speech","30 Sep","Deputy Governor","Labour market is still a little tight.",["Unemployment remains low","Productivity growth weak, which keeps costs high"]],
+  ["neu","Minutes","23 Sep","September board minutes","Board judged a gradual easing path appropriate.",["Global trade uncertainty a key risk","Household spending recovering slowly"]]],
+ "Bank of Korea":[
+  ["neu","Press conference","28 Aug","Governor","Easing bias kept, but housing and the won limit the pace.",["Seoul housing prices rising again","A weak won raises imported inflation"]],
+  ["hawk","Minutes","9 Sep","August board minutes","Several members urged caution because of household debt.",["Mortgage lending growth a concern","Two members open to a cut by year-end"]],
+  ["neu","Statement","2 Oct","Deputy Governor","Watching won volatility closely and ready to act if needed.",["Market stabilisation tools available","Exports holding up on chip demand"]]],
+ "Bank of Thailand":[
+  ["dove","Statement","8 Oct","Monetary Policy Committee","Held at 1.50% in a 5–2 vote; two members wanted a cut.",["Inflation well below the 1–3% target","Growth weak as tourism recovers slowly"]],
+  ["dove","Speech","1 Oct","Governor","There is room to support growth given very low inflation.",["Credit conditions tight for small businesses","Fiscal and monetary policy should work together"]],
+  ["neu","Press briefing","24 Sep","Assistant Governor","Monitoring baht strength and its effect on exporters.",["Gold-trading flows adding to baht volatility"]]],
+};
+/* governor / chair: latest speech broken down by topic (sample paraphrase, not a real transcript) */
+const GOV={
+ "Federal Reserve":{role:"Chair",type:"Speech",date:"7 Oct",ev:"Speech at an economics conference",
+  sum:"Said the Fed is balancing two risks that now point in opposite directions, and that the September cut was a step toward a more neutral setting rather than the start of a pre-set series.",
+  t:[["Inflation","Core PCE inflation is running around 2.9%. Tariffs have pushed up goods prices, but the Chair expects that to be a one-time level shift unless inflation expectations move. Services inflation outside housing is easing slowly."],
+     ["Labour market","Job growth has slowed sharply, partly because of lower immigration, which also reduces labour supply. Unemployment has edged up but remains low. Said the labour market is 'less dynamic' and that downside risks have risen."],
+     ["Policy path","Policy is still modestly restrictive. Gave no commitment on October, saying each meeting is 'live' and decisions depend on incoming data. Officials' projections show two more cuts this year, but the Chair stressed that is not a plan."],
+     ["Balance sheet","Said the Fed is close to the point where it would stop shrinking its balance sheet, possibly within the next few months, because money-market conditions are tightening."]]},
+ "European Central Bank":{role:"President",type:"Speech",date:"12 Oct",ev:"Speech to the European Parliament's economic committee",
+  sum:"Said monetary policy is 'in a good place' after the cutting cycle, and the ECB is ready to adjust if the outlook changes but sees no need to act now.",
+  t:[["Inflation","Headline inflation is close to 2% and staff project it to dip slightly below target next year as energy prices fall, then return to 2%. Services inflation is easing as wage growth slows."],
+     ["Growth","The economy has been more resilient than expected, helped by consumption and lower borrowing costs. US tariffs and a stronger euro are weighing on exporters, especially German industry."],
+     ["Policy","Repeated that decisions are meeting by meeting with no pre-commitment. Said the risks around inflation are now broadly balanced."],
+     ["Euro & markets","The euro's rise tightens financial conditions and is being monitored, but the ECB does not target an exchange rate."]]},
+ "Bank of Japan":{role:"Governor",type:"Press conference",date:"19 Sep",ev:"Press conference after the September policy meeting",
+  sum:"Said the BoJ will keep raising rates if its outlook for wages and prices is realised, but gave no signal on timing and stressed the need to watch the effect of US tariffs.",
+  t:[["Prices & wages","Underlying inflation is moving toward 2%. Companies are still passing on higher costs, and food inflation remains high. Next spring's wage talks will be an important test."],
+     ["Policy path","Real interest rates remain very negative, so policy is still accommodative. Further hikes are appropriate if the outlook holds, but there is 'no preset timing'."],
+     ["US tariffs & growth","Uncertainty around US trade policy has eased but profits at exporters may come under pressure; the BoJ wants to see the data before acting."],
+     ["JGBs & the yen","Said the recent rise in super-long JGB yields reflects supply and demand. A weak yen can push up import prices and will be watched closely."]]},
+ "Bank of England":{role:"Governor",type:"Speech",date:"1 Oct",ev:"Speech at a business dinner",
+  sum:"Said further rate cuts are likely but must be 'gradual and careful', because inflation has proved more persistent in the UK than in other major economies.",
+  t:[["Inflation","CPI is near 4%, pushed up by food and regulated prices. Expects inflation to fall back next year, but warned that higher inflation expectations could make it stick."],
+     ["Labour market","The labour market has loosened: vacancies are down and wage growth is slowing. Sees this as needed for services inflation to come down."],
+     ["Policy path","Downward path for rates remains, but the timing and pace of cuts are less certain than earlier this year. Did not commit to a November cut."],
+     ["Gilts","Said gilt market moves have been orderly and the BoE has slowed its sales of bonds to limit pressure on long-dated yields."]]},
+ "People's Bank of China":{role:"Governor",type:"Speech",date:"24 Sep",ev:"Speech at a financial forum in Beijing",
+  sum:"Said the PBoC will keep a 'moderately loose' policy stance and use a mix of tools to support growth, working alongside fiscal stimulus.",
+  t:[["Growth","The economy is on track for the growth target, but domestic demand, especially household spending and property, still needs support."],
+     ["Policy tools","There is room to cut banks' reserve requirement ratio and to guide lending rates lower. Targeted lending programmes for technology and consumption will be expanded."],
+     ["Yuan","The yuan will be kept basically stable at a reasonable level. Warned against one-way bets on the currency."],
+     ["Financial risks","Local-government debt and smaller banks remain areas of focus; risks are 'controllable'."]]},
+ "Reserve Bank of Australia":{role:"Governor",type:"Press conference",date:"6 Oct",ev:"Press conference after the October board meeting",
+  sum:"Explained the decision to hold the cash rate at 3.60%, saying the board wants more evidence that inflation will stay in the target band before cutting again.",
+  t:[["Inflation","Trimmed mean inflation is within the 2–3% band, but monthly data showed some services prices picking up. The Q3 CPI on 28 Oct is a key input."],
+     ["Labour market","Unemployment remains low at around 4.2%; the market is 'a little tight' but easing gradually."],
+     ["Policy path","Did not rule out a cut in November but said there is no pre-set path. The board is 'cautious'."],
+     ["Global","US trade policy and China's slowdown are the main external risks."]]},
+ "Bank of Korea":{role:"Governor",type:"Parliamentary hearing",date:"13 Oct",ev:"Annual parliamentary audit",
+  sum:"Said the bank is keeping an easing bias, but rising Seoul housing prices and household debt mean any further cut must be carefully timed.",
+  t:[["Housing & debt","Seoul apartment prices are rising again. Government lending curbs need time to work before the bank cuts further."],
+     ["Growth","Exports are strong thanks to chip demand, but domestic consumption and construction remain weak."],
+     ["Won","Said won weakness partly reflects capital outflows; the bank and government are ready to stabilise the market if moves become excessive."],
+     ["Policy path","Most board members are open to a cut within the next three months, depending on housing data."]]},
+ "Bank of Thailand":{role:"Governor",type:"Speech",date:"1 Oct",ev:"Speech at an economic outlook seminar",
+  sum:"Said policy has room to support the economy because inflation is very low, but rate cuts alone cannot fix structural weaknesses.",
+  t:[["Inflation","Headline inflation is below the 1–3% target range, mainly because of lower energy prices and government price measures."],
+     ["Growth","Growth is weak, held back by a slow tourism recovery, household debt and competition from Chinese imports."],
+     ["Credit","Lending to small businesses is tight; targeted credit measures may be more effective than broad rate cuts."],
+     ["Baht","The baht's strength, partly due to gold-trading flows, is being monitored for its impact on exporters."]]},
+};
+function govBlock(g){if(!g)return"";return `<div class="gov"><div class="qh"><span class="qtype">${g.type}</span><span class="flat num" style="font-size:12px">${g.date}</span></div>
+  <div><b>${g.role}</b> <span class="ev">· ${g.ev}</span></div><p class="sum">${g.sum}</p>
+  <dl class="topics">${g.t.map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
+  <span class="who">Sample paraphrase · the live version summarises the real transcript and links to it</span></div>`}
+function commItem([t,ty,d,who,s,pts,v]){return `<div class="quote"><div class="qh"><span class="qtype">${ty}</span><span class="flat num" style="font-size:12px">${d}</span></div>
+  <b>${s}</b><ul>${pts.map(p=>`<li>${p}</li>`).join("")}</ul><span class="who">${who}${v?" · votes this year":""} · sample paraphrase</span></div>`}
+function commBlock(items){const n=items.length;if(!n)return"";
+  return `<div class="lbl" style="margin-top:6px">Other officials</div>${items.slice(0,2).map(commItem).join("")}${n>2?`<details class="more"><summary>Show ${n-2} more</summary>${items.slice(2).map(commItem).join("")}</details>`:""}`}
+function days(d){return Math.ceil((new Date(d+"T00:00:00+08:00")-new Date())/864e5)}
+function pathSvg(p){const w=300,h=90,mn=Math.min(...p)-.15,mx=Math.max(...p)+.1,bw=w/p.length;
+  return `<svg class="path" viewBox="0 0 ${w} ${h}" aria-label="Market-implied rate path">${p.map((v,i)=>{const y=6+(h-26)*(1-(v-mn)/(mx-mn));
+   return `<rect x="${i*bw+8}" y="${y}" width="${bw-16}" height="${h-20-y}" rx="3" fill="${i?"var(--accent)":"var(--muted)"}" opacity="${i?.85:.45}"/>
+   <text x="${i*bw+bw/2}" y="${y-3}" text-anchor="middle" font-size="10" font-family="IBM Plex Mono,monospace" fill="var(--ink)">${v.toFixed(2)}</text>
+   <text x="${i*bw+bw/2}" y="${h-6}" text-anchor="middle" font-size="10" fill="var(--muted)">${i?["","Oct","Dec","Jan","Mar"][i]:"Now"}</text>`}).join("")}</svg>`}
+/* per bank: what changed vs previous remarks, press-conference Q&A, earlier remarks (all sample paraphrase) */
+const CBX={
+ "Federal Reserve":{chg:"More weight on job-market risks than in July, when inflation was the main focus. Dropped the phrase 'well positioned to wait'.",
+  qa:[["Is an October cut a done deal?","No. Each meeting is live; the committee will decide based on the data available at the time."],["Are tariffs causing lasting inflation?","So far the effect looks like a one-time price increase, but the Fed is watching inflation expectations closely."],["How do you respond to political pressure on the Fed?","The Fed will keep making decisions based only on its mandate and the data."]],
+  qaEv:"Press conference, 18 Sep",hist:[["18 Sep","Press conference","Described the cut as risk management; no preset course."],["22 Aug","Jackson Hole speech","Said shifting risks 'may warrant' adjusting policy."],["30 Jul","Press conference","Policy well positioned to wait for more clarity on tariffs."]]},
+ "European Central Bank":{chg:"Unchanged core message ('in a good place'), but added more emphasis on the stronger euro and trade risks.",
+  qa:[["Is the cutting cycle over?","Not saying that; policy is data-dependent and no option is ruled out."],["Does the stronger euro worry you?","It is part of the assessment because it lowers import prices, but the ECB doesn't target the exchange rate."],["What about French fiscal risks?","Markets are functioning well; the ECB has tools if there is disorderly market movement."]],
+  qaEv:"Press conference, 11 Sep",hist:[["11 Sep","Press conference","Held rates; disinflation process 'over'."],["24 Jul","Press conference","Held rates; wait-and-see on tariffs."],["5 Jun","Press conference","Cut to 2.00%; near end of cycle."]]},
+ "Bank of Japan":{chg:"Slightly more confident on wages than in July; less concern about US tariffs now that a trade deal is in place.",
+  qa:[["Is October or December more likely for a hike?","No preset timing; it depends on data, including wage momentum."],["Are rising super-long JGB yields a concern?","Yields are set by markets; the BoJ will respond flexibly if moves become abrupt."],["Does yen weakness change your view?","A weak yen can lift prices and is one factor considered in the outlook."]],
+  qaEv:"Press conference, 19 Sep",hist:[["31 Jul","Press conference","Raised inflation forecasts; kept rate at 0.50%."],["17 Jun","Press conference","Slowed the pace of JGB purchase reductions."],["1 May","Press conference","Delayed timing for reaching 2% inflation."]]},
+ "Bank of England":{chg:"More cautious tone than in August: 'gradual' now paired with 'careful', and less certainty on timing.",
+  qa:[["Will you cut in November?","Not pre-committing; the committee will look at the November forecast."],["Why is UK inflation higher than elsewhere?","Food and regulated prices, plus tight labour markets earlier this year."],["Is the gilt market under stress?","Markets have been orderly; the BoE slowed bond sales to reduce pressure."]],
+  qaEv:"Press conference, 7 Aug",hist:[["7 Aug","Press conference","Cut to 4.00% in a narrow 5–4 vote."],["8 May","Press conference","Cut to 4.25%; 'gradual and careful'."],["6 Feb","Press conference","Cut to 4.50%."]]},
+ "People's Bank of China":{chg:"Language moved from 'appropriately loose' to stronger promises to 'step up' counter-cyclical support.",
+  qa:[["When will the RRR be cut?","There is room to cut; timing depends on economic conditions."],["Will the yuan be allowed to weaken?","The yuan will be kept basically stable at a reasonable level."],["Is property still a risk?","Measures are helping stabilise the market; financial risks are controllable."]],
+  qaEv:"State Council press briefing, 24 Sep",hist:[["18 Jun","Lujiazui Forum speech","Announced new financial opening measures."],["7 May","Press briefing","Cut RRR by 0.5 pp and policy rate by 0.1 pp."]]},
+ "Reserve Bank of Australia":{chg:"Slightly more cautious than August, when a series of cuts was signalled; now stresses waiting for Q3 CPI.",
+  qa:[["Was a cut discussed today?","The board considered the case but judged it better to wait for more data."],["Is November live?","Every meeting is live; the Q3 CPI will be important."],["How tight is the labour market?","Still a little tight, but easing gradually."]],
+  qaEv:"Press conference, 6 Oct",hist:[["12 Aug","Press conference","Cut to 3.60%; flagged further cuts."],["8 Jul","Press conference","Surprise hold; wanted more inflation data."],["20 May","Press conference","Cut to 3.85%."]]},
+ "Bank of Korea":{chg:"More focus on housing than in August, when growth support was the main theme.",
+  qa:[["Is a cut likely in October?","Most board members are open to a cut within three months; housing data will be key."],["Is the won too weak?","Moves partly reflect capital flows; authorities can stabilise markets if needed."],["How is the chip cycle affecting growth?","Strong chip exports are supporting growth, but domestic demand remains weak."]],
+  qaEv:"Press conference, 28 Aug",hist:[["28 Aug","Press conference","Held at 2.50%; easing bias kept."],["10 Jul","Press conference","Held; flagged housing risks."],["29 May","Press conference","Cut to 2.50%."]]},
+ "Bank of Thailand":{chg:"Greater emphasis on targeted credit measures than on rate cuts compared with the August speech.",
+  qa:[["Will the MPC cut again?","There is policy room, but rate cuts alone cannot address structural problems."],["Is baht strength a problem?","It is being monitored, especially the impact of gold-trading flows on exporters."],["How weak is growth?","Growth is soft because of slow tourism and high household debt."]],
+  qaEv:"MPC press briefing, 8 Oct",hist:[["13 Aug","MPC statement","Cut to 1.50%."],["25 Jun","MPC statement","Held rates."]]},
+};
+let cbSel=store.get("md.cbSel","Federal Reserve");
+function govQuotes(g){if(!g)return"";return `<div class="gov"><div class="qh"><span class="qtype">${g.type}</span><span class="flat num" style="font-size:12px">${g.date}</span></div>
+  <div><b>${g.role}</b> <span class="ev">· ${g.ev}</span></div><p class="sum">${g.sum}</p>
+  <dl class="topics">${g.t.map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd><dd class="qt">“Exact sentence from the transcript on ${k.toLowerCase()} appears here.”</dd></div>`).join("")}</dl>
+  <span class="who">Sample paraphrase · the live version summarises the real transcript, quotes it word for word, and links to it</span></div>`}
+function renderCB(){
+  if(!CB.find(b=>b.n===cbSel))cbSel=CB[0].n;
+  const b=CB.find(x=>x.n===cbSel),g=GOV[b.n],x=CBX[b.n]||{},dd=days(b.nx);
+  document.getElementById("cbGrid").innerHTML=`<div class="chips cbpick" role="group" aria-label="Central bank">${CB.map(c=>`<button class="chip" data-cb="${c.n}" aria-pressed="${c.n===cbSel}">${c.n}</button>`).join("")}</div>
+  <div class="cbone">
+   <aside class="panel cb">
+    <header><h3>${b.n}</h3></header>
+    <div><div class="rate num">${b.r}</div><div class="cd">${b.nxl||"Next decision"}: <b>${new Date(b.nx+"T00:00:00+08:00").toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}</b> · <b class="num">${dd>0?dd+" days":"today"}</b></div></div>
+    <div><div class="lbl">Market-implied path</div>${b.path?pathSvg(b.path):`<div class="na">No free source found yet for this bank's market pricing.</div>`}</div>
+    <div><div class="lbl">Official projections</div>${b.proj?`<dl class="kv">${b.proj.map(([k,v])=>`<dt>${k}</dt><dd class="num">${v}</dd>`).join("")}</dl>`:`<div class="na">PBoC doesn't publish rate or inflation projections.</div>`}</div>
+   </aside>
+   <div class="cbmain">
+    <section class="panel cb"><div class="lbl">Latest remarks from the ${g?g.role:"governor"}</div>${govQuotes(g)}
+     ${x.chg?`<div class="chg-box"><div class="lbl">What changed from previous remarks</div>${x.chg}</div>`:""}</section>
+    ${x.qa?`<section class="panel cb"><div class="lbl">Press conference Q&amp;A · ${x.qaEv}</div>${x.qa.map(([q,a])=>`<div class="qa"><b>Q: ${q}</b><span>${a}</span></div>`).join("")}<span class="who">Sample paraphrase of reporters' questions and answers</span></section>`:""}
+    ${x.hist?`<section class="panel cb"><div class="lbl">Earlier remarks from the ${g?g.role:"governor"}</div><ul class="tl">${x.hist.map(([d,ev,s])=>`<li><span class="num flat">${d}</span><span><b>${ev}</b> · ${s}</span></li>`).join("")}</ul></section>`:""}
+    <section class="panel cb">${commBlock((COMM[b.n]||[]).filter(i=>i[3]!==(g||{}).role))||'<span class="flat">No other officials\' remarks in the last 30 days.</span>'}</section>
+   </div>
+  </div>`;
+}
+document.getElementById("cbGrid").addEventListener("click",e=>{const n=e.target.dataset.cb;if(n){cbSel=n;store.set("md.cbSel",n);renderCB()}});
+
+/* ---------- top (sample) ---------- */
+const TOP=[
+ ["US inflation in line, keeping an October Fed cut on track","Core CPI rose 0.3% m/m as expected. Treasury yields fell and stocks rose as traders added to bets on a cut at the Oct 28–29 meeting.",12],
+ ["Yen jumps as BoJ official opens the door to a December hike","USD/JPY fell almost 1% after a board member said conditions for a hike are 'falling into place'. Japanese exporters led the Nikkei lower.",7],
+ ["Big US banks kick off earnings with strong trading results","JPMorgan and Wells Fargo beat estimates on trading and dealmaking; Goldman missed on revenue. Bank shares mixed.",9],
+ ["Chip stocks rally after ASML orders beat and TSMC sales jump","AI demand drove ASML bookings above estimates, lifting semiconductor shares in Europe, Taiwan and Korea.",6],
+ ["Oil slides on rising supply as OPEC+ signals more output","Brent fell toward $65 after delegates indicated another production increase for November.",4],
+];
+const WIRE=[
+ ["21:05","Markets",1,"S&P 500 futures extend gains after CPI; Nasdaq leads"],
+ ["20:48","Rates",1,"Two-year Treasury yield falls 5 bp to lowest in a week"],
+ ["20:30","Economy",1,"US core CPI +0.3% m/m, matching forecasts; headline +2.9% y/y"],
+ ["20:12","Earnings",1,"JPMorgan Q3 trading revenue beats estimates; raises NII outlook"],
+ ["19:55","Earnings",0,"Wells Fargo profit tops estimates as fee income grows"],
+ ["19:40","Earnings",1,"Goldman Sachs revenue misses as asset-management fees slip"],
+ ["18:22","Commodities",0,"Gold holds near record as dollar softens"],
+ ["17:31","Commodities",1,"Brent drops 2% as OPEC+ delegates signal another output increase"],
+ ["17:00","Economy",1,"German ZEW sentiment falls to 31.5, below 35.0 forecast"],
+ ["16:45","FX",0,"Euro slips after weak German survey"],
+ ["15:20","Geopolitics",0,"US and China trade officials to hold call this week"],
+ ["14:10","Central banks",1,"BoJ board member: rate-hike conditions 'falling into place'"],
+ ["14:06","FX",1,"Yen jumps almost 1% against the dollar"],
+ ["13:00","Earnings",1,"ASML Q3 bookings beat estimates on AI chip demand"],
+ ["12:30","Markets",0,"Hang Seng Tech index rises 1.5% led by chipmakers"],
+ ["11:00","Economy",1,"China September exports beat forecasts; imports slow"],
+ ["09:20","Central banks",0,"Bank of Korea official says won volatility being closely watched"],
+ ["08:15","Earnings",1,"TSMC September revenue jumps on AI accelerator orders"],
+ ["07:50","Economy",0,"Japan machinery orders fall more than expected"],
+ ["06:30","Markets",0,"Asian stocks set for mixed open ahead of US inflation data"],
+];
+let wireF=store.get("md.wireF","All");
+function renderTop(){
+  document.getElementById("topStories").innerHTML=TOP.map(([h,s,n],i)=>`<div class="story"><span class="rk">${i+1}</span><h3>${esc(h)}</h3><p>${esc(s)}</p><span class="flat" style="font-size:12px">${n} related headlines · sample</span></div>`).join("");
+  const cats=["All","Market-moving",...new Set(WIRE.map(w=>w[1]))];
+  document.getElementById("wireFilter").innerHTML=cats.map(c=>`<button class="chip" aria-pressed="${c===wireF}" data-c="${c}">${c}</button>`).join("");
+  const list=WIRE.filter(w=>wireF==="All"||(wireF==="Market-moving"?w[2]:w[1]===wireF));
+  document.getElementById("wire").innerHTML=list.map(([t,c,hot,h])=>`<div class="wl ${hot?"hot":""}"><span class="num flat">${t}</span><span class="cat">${c}</span><span class="hl">${hot?'<span class="dot" title="Market-moving"></span>':""}${esc(h)}</span></div>`).join("");
+}
+document.getElementById("wireFilter").addEventListener("click",e=>{const c=e.target.dataset.c;if(c){wireF=c;store.set("md.wireF",c);renderTop()}});
+
+/* ---------- research (placeholder summaries, real links) ---------- */
+const RESEARCH=[
+ {house:"J.P. Morgan Asset Management",series:"Weekly Market Recap",freq:"Weekly, Mondays",date:"12 Oct",title:"Sample: Stocks steady as investors look to earnings season",
+  pts:["Placeholder: what moved equities, bonds and the dollar last week","Placeholder: the key data release and how markets read it","Placeholder: what the team is watching this week"],
+  url:"https://am.jpmorgan.com/us/en/asset-management/adv/insights/market-insights/market-updates/weekly-market-recap/",
+  past:[["5 Oct","Sample: Jobs data in focus as the Fed weighs its next move"],["28 Sep","Sample: Quarter-end review"]]},
+ {house:"J.P. Morgan Asset Management",series:"Guide to the Markets",freq:"Quarterly",date:"30 Sep",title:"Sample: Q4 Guide to the Markets",
+  pts:["Placeholder: valuation snapshot across regions","Placeholder: earnings growth expectations","Placeholder: fixed income yields vs history"],
+  url:"https://am.jpmorgan.com/us/en/asset-management/adv/insights/market-insights/guide-to-the-markets/",past:[]},
+ {house:"BlackRock Investment Institute",series:"Weekly Commentary",freq:"Weekly, Mondays",date:"12 Oct",title:"Sample: Staying pro-risk on the AI theme",
+  pts:["Placeholder: the main investment view this week","Placeholder: what changed in their positioning","Placeholder: key risks they flag"],
+  url:"https://www.blackrock.com/corporate/insights/blackrock-investment-institute/weekly-commentary",
+  past:[["5 Oct","Sample: Income in a world of lower rates"],["28 Sep","Sample: Japan's reflation story"]]},
+ {house:"Goldman Sachs",series:"Top of Mind (Global Investment Research)",freq:"Roughly every 3–4 weeks",date:"8 Oct",title:"Sample: Is the AI capex boom sustainable?",
+  pts:["Placeholder: the question the issue asks","Placeholder: views from the interviewed experts","Placeholder: GS economists' and strategists' take"],
+  url:"https://www.goldmansachs.com/insights/top-of-mind",site:"goldmansachs.com",
+  past:[["17 Sep","Sample: Fed independence"],["20 Aug","Sample: Dollar outlook"]]},
+ {house:"Morgan Stanley",series:"Thoughts on the Market (podcast + transcript)",freq:"Most weekdays",date:"13 Oct",title:"Sample: Why credit spreads look tight but may stay that way",
+  pts:["Placeholder: the main market call in the episode","Placeholder: the data or signal behind it","Placeholder: what would change the view"],
+  url:"https://www.morganstanley.com/ideas/thoughts-on-the-market",site:"morganstanley.com",
+  past:[["10 Oct","Sample: The outlook for Asian equities"],["9 Oct","Sample: Rates strategy ahead of CPI"]]},
+];
+function renderResearch(){
+  document.getElementById("research").innerHTML=RESEARCH.map(r=>`<article class="panel rcard">
+   <div class="house">${r.house}</div>
+   <div class="meta"><span><b>${r.series}</b></span><span>${r.freq}</span><span class="num">Latest: ${r.date}</span></div>
+   <h3>${r.title}</h3>
+   <div class="ai"><b>Summary</b>Placeholder bullets until the live version is built</div>
+   <ul>${r.pts.map(p=>`<li>${p}</li>`).join("")}</ul>
+   <a href="${r.url}" target="_blank" rel="noopener">Read the full piece on ${r.site||(r.house.startsWith("J.P.")?"jpmorgan.com":"blackrock.com")} ↗</a>
+   ${r.past.length?`<details class="more"><summary>Previous editions</summary><ul class="past">${r.past.map(([d,t])=>`<li><span class="flat num">${d}</span><span>${t}</span></li>`).join("")}</ul></details>`:""}
+  </article>`).join("");
+}
+
+/* ---------- tabs ---------- */
+function show(tab){document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===tab));
+  document.querySelectorAll("[data-panel]").forEach(p=>p.hidden=p.dataset.panel!==tab);store.set("md.tab",tab)}
+document.getElementById("tabs").addEventListener("click",e=>{const t=e.target.dataset.tab;if(t){show(t);history.replaceState(null,"","#"+t)}});
+const srcT=document.getElementById("srcToggle");srcT.checked=store.get("md.src",false);document.body.classList.toggle("show-src",srcT.checked);
+srcT.addEventListener("change",()=>{document.body.classList.toggle("show-src",srcT.checked);store.set("md.src",srcT.checked)});
+
+renderMarkets();renderNews();renderCal();renderCB();renderResearch();renderTop();
+const TABS=["markets","top","news","calendar","cb","research"],h=location.hash.slice(1),saved=store.get("md.tab","markets");
+show(TABS.includes(h)?h:TABS.includes(saved)?saved:"markets");
+</script>
