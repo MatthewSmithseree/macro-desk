@@ -32,10 +32,21 @@ jobs:
 
       - run: pip install -r requirements.txt
 
+      # Start from the last published data, so a source that fails this run doesn't blank the site.
+      - name: Restore last published data
+        run: |
+          for f in markets news; do
+            curl -sfL "https://matthewsmithseree.github.io/macro-desk/data/$f.json" -o "/tmp/$f.json" && mv "/tmp/$f.json" "site/data/$f.json" || echo "no published $f.json yet"
+          done
+
       - name: Fetch market data
         run: python scripts/fetch_markets.py
+        continue-on-error: true
+
+      - name: Fetch news and score with Gemini
+        run: python scripts/fetch_news.py
+        continue-on-error: true
         env:
-          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 

@@ -63,6 +63,7 @@ svg.spark{width:72px;height:24px;display:block}
 .news:last-child{border-bottom:0}
 .meta{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px}
 .mkt{font-weight:700;color:var(--accent)}
+.hlink{color:inherit;text-decoration:none}.hlink:hover{text-decoration:underline;color:var(--accent)}
 .news h3{margin:0;font-size:16px;font-weight:600;line-height:1.35;text-wrap:balance}
 .react{display:flex;flex-wrap:wrap;gap:6px}
 .rx{font-size:12px;padding:3px 8px;border-radius:6px}
@@ -187,7 +188,7 @@ details.tracked summary{cursor:pointer;font-weight:600;color:var(--accent);font-
   <div class="wrap">
     <div class="bar">
       <span class="brand">Macro Desk</span>
-      <span class="pill">Markets tab: live data · other tabs: sample data</span>
+      <span class="pill">Live: Markets, Top, News · sample: Calendar, Central Banks, Research</span>
       <span class="clock num" id="clock"></span>
     </div>
     <div class="sessions" id="sessions"></div>
@@ -231,20 +232,20 @@ details.tracked summary{cursor:pointer;font-weight:600;color:var(--accent);font-
   <!-- TOP -->
   <section data-panel="top" hidden>
     <p class="src">All headlines from the news feeds (RSS + Finnhub), refreshed every 15 min. Gemini scores each one 1–5 for market impact and groups duplicate stories; the highest-scoring stories of the last 24 hours become Top Stories.</p>
-    <h2>Top stories · last 24 hours</h2>
+    <div class="toolbar" style="margin:0"><h2 style="margin:0">Top stories · last 24 hours</h2><span class="sub" style="margin:0" id="topStamp"></span></div>
     <div class="panel top1" id="topStories"></div>
     <h2>Latest headlines</h2>
     <div class="chips" id="wireFilter"></div>
     <div class="panel wire" id="wire"></div>
-    <p class="note"><span class="dot"></span>marks headlines scored as market-moving (4 or 5 out of 5). All headlines here are samples.</p>
+    <p class="note"><span class="dot"></span>marks headlines scored as market-moving (4 or 5 out of 5). Headlines link to the original article. Wire times are HKT.</p>
   </section>
 
   <!-- NEWS -->
   <section data-panel="news" hidden>
     <div class="chips" id="newsFilter"></div>
-    <p class="src">Headlines: free RSS feeds (Nikkei Asia, CNBC, MarketWatch, central banks) + Finnhub free market news. Market tag and "why it matters" note: Google Gemini free tier. Price reaction: Yahoo Finance, from the last price before the headline to that instrument's session close.</p>
+    <p class="src">Headlines: Finnhub market news + RSS feeds (CNBC, MarketWatch, FT, SCMP, Investing.com, Fed, ECB, BoE). Market tag and "why it matters" note: Google Gemini free tier. Price reaction: Yahoo Finance, from the last price before the headline to that instrument's session close.</p>
     <div class="panel" id="newsList"></div>
-    <p class="note">Each headline is tagged with the market it affects. The chips show how the linked instruments moved from just before the headline to the end of that day's session.</p>
+    <p class="note">Showing headlines scored 3/5 or higher from the last 48 hours, tagged with the market they affect. Chips show how the linked instruments moved from just before the headline to that session's close ("so far" while the market is still open).</p>
   </section>
 
   <!-- CALENDAR -->
@@ -356,28 +357,31 @@ function curvePanel(){
 }
 document.getElementById("markets").addEventListener("click",e=>{const k=e.target.dataset.cty;if(k){cty=k;store.set("md.cty",k);renderMarkets()}});
 
-/* ---------- news (sample) ---------- */
-const NEWS=[
- {t:"14:05",m:"Asia",src:"Nikkei Asia",h:"BoJ board member says a rate hike could come as early as December",rx:[["USD/JPY",-0.92],["Nikkei 225",-1.14],["JGB 10Y","+4 bp"]],w:"A December hike would narrow the US–Japan rate gap, which supports the yen and weighs on exporters."},
- {t:"11:00",m:"Asia",src:"Finnhub",h:"China September exports beat forecasts as shipments to ASEAN surge",rx:[["USD/CNH",-0.15],["Hang Seng",0.71]],w:"Strong exports ease worries about Chinese growth and reduce pressure for more stimulus."},
- {t:"09:20",m:"Asia",src:"Finnhub",h:"Bank of Korea holds rate, flags Seoul housing prices as a risk",rx:[["USD/KRW",0.33],["KOSPI",-0.48]],w:"Housing concerns make further cuts less likely, so the easing cycle may be ending."},
- {t:"08:15",m:"Asia",src:"Finnhub",h:"TSMC monthly revenue jumps on AI accelerator orders",rx:[["TSMC",2.6],["Nasdaq",0.41]],w:"TSMC makes most AI chips, so its sales are an early read on AI spending across the sector."},
- {t:"20:30",m:"US",src:"CNBC",h:"US core CPI rises 0.3% m/m, in line with consensus",rx:[["Dollar Index",-0.24],["S&P 500",0.62],["UST 2Y","−5 bp"]],w:"No inflation surprise keeps a Fed cut at the next meeting on the table."},
- {t:"02:10",m:"US",src:"MarketWatch",h:"Fed governor: further cuts appropriate if hiring keeps slowing",rx:[["Dollar Index",-0.31],["Gold",0.85]],w:"Adds to the view that the Fed cares more about jobs than inflation right now."},
- {t:"19:45",m:"US",src:"Finnhub",h:"JPMorgan beats on trading revenue; raises net interest income outlook",rx:[["JPM",2.9],["S&P 500",0.2]],w:"The largest US bank sets the tone for financials and gives a read on consumer credit health."},
- {t:"17:00",m:"Europe",src:"Finnhub",h:"ZEW economic sentiment falls more than expected",rx:[["EUR/USD",-0.21],["Euro Stoxx 50",-0.38]],w:"Weaker German investor sentiment raises the odds that the ECB has to cut again."},
- {t:"14:00",m:"Europe",src:"Finnhub",h:"UK wage growth slows to slowest pace in three years; gilts rally",rx:[["GBP/USD",-0.44],["Gilt 10Y","−7 bp"]],w:"Slower wages are the main thing the BoE needs to see before cutting further."},
- {t:"13:00",m:"Europe",src:"Finnhub",h:"ASML orders top estimates on AI chip demand",rx:[["ASML",5.3],["Euro Stoxx 50",0.74]],w:"ASML orders show how much chipmakers plan to build, a forward signal for the whole AI supply chain."},
-];
+/* ---------- news + top (live data from data/news.json, written by scripts/fetch_news.py) ---------- */
+let ND=null,ndErr=false;
+const safeUrl=u=>/^https?:\/\//.test(u||"")?esc(u):"#";
+const hkt=t=>new Date(t).toLocaleString("en-GB",{timeZone:"Asia/Hong_Kong",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+function rxHtml(x){
+  if(x.rx&&x.rx.length)return `<div class="react">${x.rx.map(r=>`<span class="rx ${cls(r.chg)} num">${esc(r.name)} ${r.unit==="bp"?sign(Math.round(r.chg))+" bp":sign(r.chg.toFixed(2))+"%"} <span class="flat">${r.final?"by close":"so far"}</span></span>`).join("")}</div>`;
+  if(x.instruments&&x.instruments.length)return `<div class="react"><span class="flat" style="font-size:12px">Waiting for ${x.instruments.map(esc).join(", ")} to trade after this headline</span></div>`;
+  return "";
+}
+function loadNews(){
+  fetch("data/news.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw r.status;return r.json()}).then(d=>{ND=d;ndErr=false;renderTop();renderNews()})
+   .catch(()=>{ndErr=true;renderTop();renderNews()});
+}
+const ndMsg=()=>`<div style="padding:16px;color:var(--muted)">${ndErr?"Couldn't load headlines. Run scripts/fetch_news.py, then reload.":"Loading headlines…"}</div>`;
 let newsF=store.get("md.newsF","All");
 function renderNews(){
-  document.getElementById("newsFilter").innerHTML=["All","Asia","US","Europe"].map(r=>`<button class="chip" aria-pressed="${r===newsF}" data-r="${r}">${r}</button>`).join("");
-  const list=NEWS.filter(n=>newsF==="All"||n.m===newsF);
-  document.getElementById("newsList").innerHTML=list.map(n=>`<article class="news">
-    <div class="meta"><span class="mkt">${n.m}</span><span class="num">${n.t} HKT</span><span>${n.src}</span><span>Sample headline</span></div>
-    <h3>${esc(n.h)}</h3>
-    <div class="ai"><b>Why it matters</b>${esc(n.w)}</div>
-    <div class="react">${n.rx.map(([i,v])=>typeof v==="string"?`<span class="rx ${v.startsWith("+")?"up":"down"} num">${i} ${v} <span class="flat">by close</span></span>`:`<span class="rx ${cls(v)} num">${i} ${sign(v.toFixed(2))}% <span class="flat">by close</span></span>`).join("")}</div></article>`).join("");
+  const regions=["All","Asia","US","Europe","Global"];if(!regions.includes(newsF))newsF="All";
+  document.getElementById("newsFilter").innerHTML=regions.map(r=>`<button class="chip" aria-pressed="${r===newsF}" data-r="${r}">${r}</button>`).join("");
+  if(!ND){document.getElementById("newsList").innerHTML=ndMsg();return}
+  const list=ND.items.filter(n=>n.score>=3&&(newsF==="All"||n.market===newsF));
+  document.getElementById("newsList").innerHTML=list.length?list.map(n=>`<article class="news">
+    <div class="meta"><span class="mkt">${esc(n.market)}</span><span class="num">${hkt(n.time)} HKT</span><span>${esc(n.source)}</span><span>${esc(n.category)}</span><span>Impact ${n.score}/5</span></div>
+    <h3><a class="hlink" href="${safeUrl(n.url)}" target="_blank" rel="noopener">${esc(n.headline)}</a></h3>
+    ${n.why?`<div class="ai"><b>Why it matters</b>${esc(n.why)}</div>`:""}
+    ${rxHtml(n)}</article>`).join(""):`<div style="padding:16px;color:var(--muted)">No market-relevant headlines for ${newsF} in the last 48 hours.</div>`;
 }
 document.getElementById("newsFilter").addEventListener("click",e=>{const r=e.target.dataset.r;if(r){newsF=r;store.set("md.newsF",r);renderNews()}});
 
@@ -715,43 +719,20 @@ function renderCB(){
 }
 document.getElementById("cbGrid").addEventListener("click",e=>{const n=e.target.dataset.cb;if(n){cbSel=n;store.set("md.cbSel",n);renderCB()}});
 
-/* ---------- top (sample) ---------- */
-const TOP=[
- ["US inflation in line, keeping an October Fed cut on track","Core CPI rose 0.3% m/m as expected. Treasury yields fell and stocks rose as traders added to bets on a cut at the Oct 28–29 meeting.",12],
- ["Yen jumps as BoJ official opens the door to a December hike","USD/JPY fell almost 1% after a board member said conditions for a hike are 'falling into place'. Japanese exporters led the Nikkei lower.",7],
- ["Big US banks kick off earnings with strong trading results","JPMorgan and Wells Fargo beat estimates on trading and dealmaking; Goldman missed on revenue. Bank shares mixed.",9],
- ["Chip stocks rally after ASML orders beat and TSMC sales jump","AI demand drove ASML bookings above estimates, lifting semiconductor shares in Europe, Taiwan and Korea.",6],
- ["Oil slides on rising supply as OPEC+ signals more output","Brent fell toward $65 after delegates indicated another production increase for November.",4],
-];
-const WIRE=[
- ["21:05","Markets",1,"S&P 500 futures extend gains after CPI; Nasdaq leads"],
- ["20:48","Rates",1,"Two-year Treasury yield falls 5 bp to lowest in a week"],
- ["20:30","Economy",1,"US core CPI +0.3% m/m, matching forecasts; headline +2.9% y/y"],
- ["20:12","Earnings",1,"JPMorgan Q3 trading revenue beats estimates; raises NII outlook"],
- ["19:55","Earnings",0,"Wells Fargo profit tops estimates as fee income grows"],
- ["19:40","Earnings",1,"Goldman Sachs revenue misses as asset-management fees slip"],
- ["18:22","Commodities",0,"Gold holds near record as dollar softens"],
- ["17:31","Commodities",1,"Brent drops 2% as OPEC+ delegates signal another output increase"],
- ["17:00","Economy",1,"German ZEW sentiment falls to 31.5, below 35.0 forecast"],
- ["16:45","FX",0,"Euro slips after weak German survey"],
- ["15:20","Geopolitics",0,"US and China trade officials to hold call this week"],
- ["14:10","Central banks",1,"BoJ board member: rate-hike conditions 'falling into place'"],
- ["14:06","FX",1,"Yen jumps almost 1% against the dollar"],
- ["13:00","Earnings",1,"ASML Q3 bookings beat estimates on AI chip demand"],
- ["12:30","Markets",0,"Hang Seng Tech index rises 1.5% led by chipmakers"],
- ["11:00","Economy",1,"China September exports beat forecasts; imports slow"],
- ["09:20","Central banks",0,"Bank of Korea official says won volatility being closely watched"],
- ["08:15","Earnings",1,"TSMC September revenue jumps on AI accelerator orders"],
- ["07:50","Economy",0,"Japan machinery orders fall more than expected"],
- ["06:30","Markets",0,"Asian stocks set for mixed open ahead of US inflation data"],
-];
+/* ---------- top (rendered from the same news.json) ---------- */
 let wireF=store.get("md.wireF","All");
 function renderTop(){
-  document.getElementById("topStories").innerHTML=TOP.map(([h,s,n],i)=>`<div class="story"><span class="rk">${i+1}</span><h3>${esc(h)}</h3><p>${esc(s)}</p><span class="flat" style="font-size:12px">${n} related headlines · sample</span></div>`).join("");
-  const cats=["All","Market-moving",...new Set(WIRE.map(w=>w[1]))];
-  document.getElementById("wireFilter").innerHTML=cats.map(c=>`<button class="chip" aria-pressed="${c===wireF}" data-c="${c}">${c}</button>`).join("");
-  const list=WIRE.filter(w=>wireF==="All"||(wireF==="Market-moving"?w[2]:w[1]===wireF));
-  document.getElementById("wire").innerHTML=list.map(([t,c,hot,h])=>`<div class="wl ${hot?"hot":""}"><span class="num flat">${t}</span><span class="cat">${c}</span><span class="hl">${hot?'<span class="dot" title="Market-moving"></span>':""}${esc(h)}</span></div>`).join("");
+  if(!ND){document.getElementById("topStories").innerHTML=ndMsg();document.getElementById("wire").innerHTML="";document.getElementById("wireFilter").innerHTML="";return}
+  document.getElementById("topStamp").textContent="Updated "+hkt(ND.updated_utc)+" HKT";
+  const byId=Object.fromEntries(ND.items.map(x=>[x.id,x]));
+  document.getElementById("topStories").innerHTML=ND.top.length?ND.top.map((s,i)=>{const rel=s.ids.map(id=>byId[id]).filter(Boolean);
+    return `<div class="story"><span class="rk">${i+1}</span><h3>${esc(s.title)}</h3><p>${esc(s.summary)}</p>
+     ${rel.length?`<details class="more"><summary>${rel.length} related headline${rel.length>1?"s":""}</summary><ul class="past">${rel.map(x=>`<li><span class="flat num">${hkt(x.time)}</span><span><a class="hlink" href="${safeUrl(x.url)}" target="_blank" rel="noopener">${esc(x.headline)}</a> <span class="flat">· ${esc(x.source)}</span></span></li>`).join("")}</ul></details>`:""}</div>`}).join("")
+   :`<div style="padding:16px;color:var(--muted)">Top stories will appear after the next update.</div>`;
+  const cats=["All","Market-moving",...new Set(ND.items.map(w=>w.category))];if(!cats.includes(wireF))wireF="All";
+  document.getElementById("wireFilter").innerHTML=cats.map(c=>`<button class="chip" aria-pressed="${c===wireF}" data-c="${esc(c)}">${esc(c)}</button>`).join("");
+  const list=ND.items.filter(w=>wireF==="All"||(wireF==="Market-moving"?w.score>=4:w.category===wireF)).slice(0,150);
+  document.getElementById("wire").innerHTML=list.map(w=>`<div class="wl ${w.score>=4?"hot":""}"><span class="num flat">${hkt(w.time).split(" ").pop()}</span><span class="cat">${esc(w.category)}</span><span class="hl">${w.score>=4?'<span class="dot" title="Market-moving"></span>':""}<a class="hlink" href="${safeUrl(w.url)}" target="_blank" rel="noopener">${esc(w.headline)}</a> <span class="flat" style="font-size:12px">· ${esc(w.source)}</span></span></div>`).join("");
 }
 document.getElementById("wireFilter").addEventListener("click",e=>{const c=e.target.dataset.c;if(c){wireF=c;store.set("md.wireF",c);renderTop()}});
 
@@ -796,7 +777,7 @@ document.getElementById("tabs").addEventListener("click",e=>{const t=e.target.da
 const srcT=document.getElementById("srcToggle");srcT.checked=store.get("md.src",false);document.body.classList.toggle("show-src",srcT.checked);
 srcT.addEventListener("change",()=>{document.body.classList.toggle("show-src",srcT.checked);store.set("md.src",srcT.checked)});
 
-renderMarkets();loadMarkets();setInterval(loadMarkets,5*60*1000);renderNews();renderCal();renderCB();renderResearch();renderTop();
+renderMarkets();loadMarkets();setInterval(loadMarkets,5*60*1000);renderNews();renderTop();loadNews();setInterval(loadNews,5*60*1000);renderCal();renderCB();renderResearch();
 const TABS=["markets","top","news","calendar","cb","research"],h=location.hash.slice(1),saved=store.get("md.tab","markets");
 show(TABS.includes(h)?h:TABS.includes(saved)?saved:"markets");
 </script>
