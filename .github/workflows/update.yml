@@ -55,6 +55,7 @@ jobs:
         continue-on-error: true
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
 
       - name: Fetch earnings (refreshes at most hourly)
         run: python scripts/fetch_earnings.py

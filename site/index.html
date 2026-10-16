@@ -257,7 +257,7 @@ details.tracked summary{cursor:pointer;font-weight:600;color:var(--accent);font-
       <button class="chip" id="calHigh" aria-pressed="true">High impact only</button>
       <button class="chip" id="calAll" aria-pressed="false">Expand all</button>
     </div>
-    <p class="src">Events, forecasts and previous figures: Forex Factory weekly feed (covers the US, euro area, UK, Japan, China and Australia; one week at a time). Actual figures: picked out of news headlines by Gemini and only kept if the headline states the number. Indicator guides: written by Gemini once per indicator.</p>
+    <p class="src">Events, forecasts and previous figures: Forex Factory weekly feed (covers the US, euro area, UK, Japan, China and Australia; one week at a time). Actual figures: US releases from FRED (official data, as first published); other countries picked out of news headlines by Gemini and only kept if the headline states the number. Indicator guides: written by Gemini once per indicator.</p>
     <div class="panel tbl"><table id="ecoTbl" class="cal"></table></div>
     <p class="note">Tap any row for a guide to the indicator. <span class="dot"></span>= high impact. Actual = n/a when no headline stated the figure. Reactions show how markets moved from just before the release to that market's close ("so far" while it's open). Events released at the same time share the same reaction.</p>
   </section>
@@ -433,7 +433,7 @@ function renderCal(){
      <td class="rxc">${e.rx&&e.rx.length?rxList(e.rx,2)+(e.rx_final?"":' <span class="flat" style="font-size:11px">so far</span>'):`<span class="flat">–</span>`}</td></tr>
      <tr class="det"${open?"":" hidden"}><td colspan="7"><div class="detail">
       ${g?`<p class="lead">${esc(g.short)}</p><div class="dgrid"><div><div class="lbl">What it measures</div>${esc(g.what)}</div><div><div class="lbl">Why markets care</div>${esc(g.why)}</div><div><div class="lbl">What to watch</div>${esc(g.watch)}</div></div>`:`<p class="lead flat">Guide being written; check back after the next update.</p>`}
-      ${e.actual_src?`<div style="font-size:13px"><span class="lbl">Actual from headline</span> <a class="hlink" href="${safeUrl(e.actual_src.url)}" target="_blank" rel="noopener">${esc(e.actual_src.headline)}</a></div>`:""}
+      ${e.actual_src?`<div style="font-size:13px"><span class="lbl">${e.actual_by==="FRED"?"Official figure":"Actual from headline"}</span> <a class="hlink" href="${safeUrl(e.actual_src.url)}" target="_blank" rel="noopener">${esc(e.actual_src.headline)}</a></div>`:""}
       ${e.rx&&e.rx.length?`<div><div class="lbl">Market reaction ${e.rx_final?"by close":"so far"}</div><div class="react" style="margin-top:6px">${rxList(e.rx,6)}</div></div>`:""}
      </div></td></tr>`}).join("")).join(""):`<tr><td colspan="7" style="padding:16px;color:var(--muted)">${empty}</td></tr>`)+`</tbody>`;
 }
