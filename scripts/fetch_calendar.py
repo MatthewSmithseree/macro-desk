@@ -93,7 +93,13 @@ def digits(s: str) -> str:
 
 
 def fill_actuals(events: list[dict], news: list[dict]) -> None:
-    due = [e for e in events if not e.get("actual") and NOW - timedelta(hours=48) < _t(e) <= NOW]
+    # speeches, summits etc. have no forecast or previous figure, so they can't have an "actual"
+    for e in events:
+        if not (e.get("forecast") or e.get("previous")) and e.get("actual_by") != "FRED":
+            for k in ("actual", "actual_src", "surprise"):
+                e.pop(k, None)
+    due = [e for e in events if not e.get("actual") and (e.get("forecast") or e.get("previous"))
+           and NOW - timedelta(hours=48) < _t(e) <= NOW]
     if not due or not news:
         return
     by_id = {n["id"]: n for n in news}
