@@ -42,6 +42,8 @@ jobs:
       - name: Fetch market data
         run: python scripts/fetch_markets.py
         continue-on-error: true
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
 
       - name: Fetch news and score with Gemini
         run: python scripts/fetch_news.py

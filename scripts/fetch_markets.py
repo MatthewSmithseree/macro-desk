@@ -16,12 +16,15 @@ from __future__ import annotations
 import io
 import json
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pandas as pd
 import requests
 import yfinance as yf
+
+from common import load_env
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "site" / "data" / "markets.json"
@@ -194,7 +197,15 @@ def japan_mof() -> pd.DataFrame:
 
 
 def fred(series_id: str) -> pd.Series:
+    """Official FRED API (needs FRED_API_KEY); the public CSV link is only a fallback because it
+    often times out from GitHub's servers."""
     start = (datetime.now() - timedelta(days=400)).strftime("%Y-%m-%d")
+    key = os.environ.get("FRED_API_KEY", "").strip()
+    if key:
+        r = get("https://api.stlouisfed.org/fred/series/observations", series_id=series_id, api_key=key,
+                file_type="json", observation_start=start)
+        obs = [(o["date"], o["value"]) for o in r.json()["observations"] if o["value"] not in (".", "")]
+        return pd.Series([float(v) for _, v in obs], index=pd.to_datetime([d for d, _ in obs]))
     r = get("https://fred.stlouisfed.org/graph/fredgraph.csv", id=series_id, cosd=start)
     df = pd.read_csv(io.StringIO(r.text))
     s = pd.to_numeric(df.iloc[:, 1], errors="coerce")
@@ -225,6 +236,7 @@ def curve(df: pd.DataFrame, tenors: list[str], labels: list[str]) -> dict:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    load_env()
     groups, curves, errors = [], {}, []
 
     # Prices from Yahoo
@@ -295,6 +307,19 @@ def main() -> None:
 
     groups.append({"tab": "Commodities", "name": "Commodities & crypto", "unit": "price",
                    "source": "Yahoo Finance (futures front month for oil and gold)", "items": price_items(COMMODITIES)})
+
+    # Anything that failed this run: show the last good value instead of "unavailable".
+    if OUT.exists():
+        try:
+            prev = json.loads(OUT.read_text(encoding="utf-8"))
+            for k, c in prev.get("curves", {}).items():
+                curves.setdefault(k, {**c, "stale": True})
+            last = {(g["name"], i["name"]): i for g in prev["groups"] for i in g["items"] if "error" not in i}
+            for g in groups:
+                g["items"] = [({**last[(g["name"], i["name"])], "stale": True}
+                               if "error" in i and (g["name"], i["name"]) in last else i) for i in g["items"]]
+        except (ValueError, KeyError) as e:
+            log.warning("Could not read previous markets.json: %s", e)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     payload = {"updated_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
