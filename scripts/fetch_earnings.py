@@ -30,18 +30,23 @@ AI = [
     ("NVDA", "Nvidia", "AI / chips"), ("MSFT", "Microsoft", "AI / cloud"), ("GOOGL", "Alphabet", "AI / cloud"),
     ("AMZN", "Amazon", "AI / cloud"), ("META", "Meta Platforms", "AI"), ("AVGO", "Broadcom", "AI / chips"),
     ("AMD", "AMD", "AI / chips"), ("ORCL", "Oracle", "AI / cloud"), ("PLTR", "Palantir", "AI / software"),
-    ("MU", "Micron", "AI / memory"), ("AAPL", "Apple", "AI / devices"), ("TSLA", "Tesla", "AI / autonomy"),
-    ("CRM", "Salesforce", "AI / software"), ("SAP", "SAP", "AI / software"), ("ARM", "Arm Holdings", "AI / chips"),
+    ("MU", "Micron", "AI / memory"), ("ARM", "Arm Holdings", "AI / chips"),
     ("MRVL", "Marvell", "AI / chips"), ("ANET", "Arista Networks", "AI / networking"),
     ("VRT", "Vertiv", "AI / data-centre power"), ("DELL", "Dell Technologies", "AI / servers"),
     ("ASML", "ASML", "AI / semis"), ("SU.PA", "Schneider Electric", "AI / data-centre power"),
     ("2330.TW", "TSMC", "AI / semis"), ("2317.TW", "Hon Hai (Foxconn)", "AI / servers"),
     ("2382.TW", "Quanta Computer", "AI / servers"), ("2454.TW", "MediaTek", "AI / chips"),
     ("005930.KS", "Samsung Electronics", "AI / memory"), ("000660.KS", "SK Hynix", "AI / memory"),
-    ("0700.HK", "Tencent", "AI / platforms"), ("9988.HK", "Alibaba", "AI / cloud"), ("9888.HK", "Baidu", "AI"),
+    ("9988.HK", "Alibaba", "AI / cloud"), ("9888.HK", "Baidu", "AI"),
     ("0981.HK", "SMIC", "AI / semis"), ("9984.T", "SoftBank Group", "AI / investment"),
     ("8035.T", "Tokyo Electron", "AI / semis"), ("6857.T", "Advantest", "AI / semis"),
     ("6146.T", "Disco", "AI / semis"), ("5803.T", "Fujikura", "AI / data-centre"),
+]
+TECH = [
+    ("AAPL", "Apple", "Devices"), ("TSLA", "Tesla", "EVs"), ("CRM", "Salesforce", "Software"),
+    ("SAP", "SAP", "Software"), ("NFLX", "Netflix", "Streaming"), ("0700.HK", "Tencent", "Internet"),
+    ("1810.HK", "Xiaomi", "Consumer electronics"), ("6758.T", "Sony", "Consumer electronics"),
+    ("INFY.NS", "Infosys", "IT services"),
 ]
 FIN = [
     ("JPM", "JPMorgan Chase", "Bank"), ("BAC", "Bank of America", "Bank"), ("GS", "Goldman Sachs", "Bank"),
@@ -92,7 +97,7 @@ def fmt_money(v, us: bool):
 def build() -> list[dict]:
     key = os.environ.get("FINNHUB_API_KEY", "").strip()
     out = []
-    for group, rows in (("AI", AI), ("Financials", FIN)):
+    for group, rows in (("AI", AI), ("Tech", TECH), ("Financials", FIN)):
         for sym, name, theme in rows:
             us = "." not in sym
             try:
@@ -136,17 +141,19 @@ def main() -> None:
     try:
         prev = requests.get(SITE_URL.rstrip("/") + "/data/earnings.json", headers=HEADERS, timeout=30).json()
         age = NOW - datetime.fromisoformat(prev["updated_utc"].replace("Z", "+00:00"))
-        if age < timedelta(minutes=REFRESH_MINUTES) and os.environ.get("FORCE") != "1":
+        same_list = prev.get("tracked") == sorted(sym for _, rows in (("AI", AI), ("Tech", TECH), ("Financials", FIN)) for sym, _, _ in rows)
+        if age < timedelta(minutes=REFRESH_MINUTES) and same_list and os.environ.get("FORCE") != "1":
             OUT.write_text(json.dumps(prev, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
             log.info("Earnings refreshed %d min ago; reusing", age.total_seconds() // 60)
             return
     except (requests.RequestException, ValueError, KeyError):
         pass
     rows = build()
-    OUT.write_text(json.dumps({"updated_utc": NOW.strftime("%Y-%m-%dT%H:%M:%SZ"), "rows": rows},
+    OUT.write_text(json.dumps({"updated_utc": NOW.strftime("%Y-%m-%dT%H:%M:%SZ"), "rows": rows,
+                              "tracked": sorted(sym for rows_ in (AI, TECH, FIN) for sym, _, _ in rows_)},
                               ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    log.info("Wrote earnings.json: %d reports (%d AI, %d financials)", len(rows),
-             sum(r["group"] == "AI" for r in rows), sum(r["group"] == "Financials" for r in rows))
+    log.info("Wrote earnings.json: %d reports (%d AI, %d tech, %d financials)", len(rows),
+             sum(r["group"] == "AI" for r in rows), sum(r["group"] == "Tech" for r in rows), sum(r["group"] == "Financials" for r in rows))
 
 
 if __name__ == "__main__":

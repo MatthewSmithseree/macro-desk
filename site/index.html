@@ -222,6 +222,8 @@ details.tracked summary{cursor:pointer;font-weight:600;color:var(--accent);font-
       <p class="src">Dates and EPS: Yahoo Finance (all listings). Revenue: Finnhub (US listings only). Reports from the last 14 days and the next 45 days.</p>
       <h2 id="earnTechH">AI</h2>
       <div class="panel tbl" id="earnTechP"><table id="earnTech"></table></div>
+      <h2 id="earnTkH">Tech</h2>
+      <div class="panel tbl" id="earnTkP"><table id="earnTk"></table></div>
       <h2 id="earnFinH">Financials</h2>
       <div class="panel tbl" id="earnFinP"><table id="earnFin"></table></div>
       <p class="note">US companies reporting after the close publish around 04:00–05:00 HKT the next morning, so they may show the following day. Non-US EPS is in local currency. Revenue figures are only available for US listings. A highlighted row has passed its date but results aren't in yet.</p>
@@ -367,10 +369,11 @@ const ndMsg=()=>`<div style="padding:16px;color:var(--muted)">${ndErr?"Couldn't 
 
 /* ---------- calendar + earnings (live: data/calendar.json and data/earnings.json) ---------- */
 let CD=null,ED=null,cdErr=false,edErr=false;
-const TRACKED=[["AI",[["NVDA","Nvidia"],["MSFT","Microsoft"],["GOOGL","Alphabet"],["AMZN","Amazon"],["META","Meta"],["AVGO","Broadcom"],["AMD","AMD"],["ORCL","Oracle"],["PLTR","Palantir"],["MU","Micron"],["AAPL","Apple"],["TSLA","Tesla"],["CRM","Salesforce"],["SAP","SAP"],["0700.HK","Tencent"],
+const TRACKED=[["AI",[["NVDA","Nvidia"],["MSFT","Microsoft"],["GOOGL","Alphabet"],["AMZN","Amazon"],["META","Meta"],["AVGO","Broadcom"],["AMD","AMD"],["ORCL","Oracle"],["PLTR","Palantir"],["MU","Micron"],
    ["ARM","Arm Holdings"],["MRVL","Marvell"],["ANET","Arista Networks"],["VRT","Vertiv"],["DELL","Dell Technologies"],
    ["ASML","ASML"],["SU.PA","Schneider Electric"],["2330.TW","TSMC"],["2317.TW","Hon Hai (Foxconn)"],["2382.TW","Quanta Computer"],["2454.TW","MediaTek"],["005930.KS","Samsung Electronics"],["000660.KS","SK Hynix"],
    ["9988.HK","Alibaba"],["9888.HK","Baidu"],["9984.T","SoftBank Group"],["8035.T","Tokyo Electron"],["6857.T","Advantest"],["6146.T","Disco"],["5803.T","Fujikura"],["0981.HK","SMIC"]]],
+ ["Tech",[["AAPL","Apple"],["TSLA","Tesla"],["CRM","Salesforce"],["SAP","SAP"],["NFLX","Netflix"],["0700.HK","Tencent"],["1810.HK","Xiaomi"],["6758.T","Sony"],["INFY.NS","Infosys"]]],
  ["Financials",[["JPM","JPMorgan"],["BAC","Bank of America"],["GS","Goldman Sachs"],["MS","Morgan Stanley"],["WFC","Wells Fargo"],["BLK","BlackRock"],["0005.HK","HSBC"],["1299.HK","AIA"],["HDFCBANK.NS","HDFC Bank"]]]];
 let calWin=store.get("md.calWin","next"),calHigh=store.get("md.calHigh",true);
 const calOpen=new Set();let calAll=false;
@@ -420,11 +423,11 @@ function renderCal(){
 let earnF=store.get("md.earnF","All");
 document.getElementById("earnFilter").addEventListener("click",e=>{const g=e.target.dataset.g;if(g){earnF=g;store.set("md.earnF",g);renderEarn()}});
 function renderEarn(){
-  if(!["All","AI","Financials"].includes(earnF))earnF="All";
-  document.getElementById("earnFilter").innerHTML=["All","AI","Financials"].map(g=>`<button class="chip" data-g="${g}" aria-pressed="${g===earnF}">${g}</button>`).join("");
-  for(const [id,g] of [["Tech","AI"],["Fin","Financials"]]){const hide=earnF!=="All"&&earnF!==g;document.getElementById("earn"+id+"H").hidden=hide;document.getElementById("earn"+id+"P").hidden=hide}
+  if(!["All","AI","Tech","Financials"].includes(earnF))earnF="All";
+  document.getElementById("earnFilter").innerHTML=["All","AI","Tech","Financials"].map(g=>`<button class="chip" data-g="${g}" aria-pressed="${g===earnF}">${g}</button>`).join("");
+  for(const [id,g] of [["Tech","AI"],["Tk","Tech"],["Fin","Financials"]]){const hide=earnF!=="All"&&earnF!==g;document.getElementById("earn"+id+"H").hidden=hide;document.getElementById("earn"+id+"P").hidden=hide}
   document.getElementById("tracked").innerHTML=TRACKED.map(([g,l])=>`<div><h4>${g} (${l.length})</h4><ul>${l.map(([t,n])=>`<li>${n} <span class="num">${t}</span></li>`).join("")}</ul></div>`).join("");
-  if(!ED){for(const id of ["earnTech","earnFin"])document.getElementById(id).innerHTML=`<tbody><tr><td style="padding:16px;color:var(--muted)">${edErr?"Couldn't load earnings. Run scripts/fetch_earnings.py, then reload.":"Loading earnings…"}</td></tr></tbody>`;return}
+  if(!ED){for(const id of ["earnTech","earnTk","earnFin"])document.getElementById(id).innerHTML=`<tbody><tr><td style="padding:16px;color:var(--muted)">${edErr?"Couldn't load earnings. Run scripts/fetch_earnings.py, then reload.":"Loading earnings…"}</td></tr></tbody>`;return}
   document.getElementById("earnStamp").textContent="Updated "+hkt(ED.updated_utc)+" HKT";
   const money=(v,us)=>v==null?null:(us?"$":"")+fmt(v,2);
   const pend=t=>`<span class="flat">${Date.parse(t)>Date.now()?"–":"pending"}</span>`;
@@ -434,6 +437,7 @@ function renderEarn(){
      <td class="r num">${r.rev_est?esc(r.rev_est):"–"}</td><td class="r num nw">${r.rev_act?esc(r.rev_act)+surp(r.rev_surprise):(r.rev_est?pend(r.time):"–")}</td></tr>`).join("")
    :`<tr><td colspan="6" style="padding:16px;color:var(--muted)">No reports in this window.</td></tr>`)+`</tbody>`;
   document.getElementById("earnTech").innerHTML=rows(ED.rows.filter(r=>r.group==="AI"));
+  document.getElementById("earnTk").innerHTML=rows(ED.rows.filter(r=>r.group==="Tech"));
   document.getElementById("earnFin").innerHTML=rows(ED.rows.filter(r=>r.group==="Financials"));
 }
 
