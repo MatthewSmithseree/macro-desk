@@ -217,12 +217,14 @@ details.tracked summary{cursor:pointer;font-weight:600;color:var(--accent);font-
     </div>
     <div id="markets"></div>
     <div id="earnBlock">
-      <div class="toolbar" style="margin:22px 0 0"><h2 style="margin:0">Earnings calendar · AI</h2><span class="sub" style="margin:0" id="earnStamp"></span></div>
-      <p class="src">Dates and EPS: Yahoo Finance (all listings). Revenue and before-open/after-close timing: Finnhub (US listings only). Reports from the last 14 days and the next 45 days.</p>
-      <div class="panel tbl"><table id="earnTech"></table></div>
-      <h2>Earnings calendar · Financials</h2>
-      <div class="panel tbl"><table id="earnFin"></table></div>
-      <p class="note">US companies reporting after the close publish around 04:00–05:00 HKT the next morning. Non-US EPS is in local currency. Revenue figures are only available for US listings. A highlighted row has passed its date but results aren't in yet.</p>
+      <div class="toolbar" style="margin:22px 0 8px"><h2 style="margin:0">Earnings calendar</h2><span class="sub" style="margin:0" id="earnStamp"></span></div>
+      <div class="chips" id="earnFilter" role="group" aria-label="Earnings group"></div>
+      <p class="src">Dates and EPS: Yahoo Finance (all listings). Revenue: Finnhub (US listings only). Reports from the last 14 days and the next 45 days.</p>
+      <h2 id="earnTechH">AI</h2>
+      <div class="panel tbl" id="earnTechP"><table id="earnTech"></table></div>
+      <h2 id="earnFinH">Financials</h2>
+      <div class="panel tbl" id="earnFinP"><table id="earnFin"></table></div>
+      <p class="note">US companies reporting after the close publish around 04:00–05:00 HKT the next morning, so they may show the following day. Non-US EPS is in local currency. Revenue figures are only available for US listings. A highlighted row has passed its date but results aren't in yet.</p>
       <details class="tracked"><summary>Tracked companies</summary><div class="tgrid" id="tracked"></div></details>
     </div>
   </section>
@@ -415,17 +417,22 @@ function renderCal(){
       ${e.rx&&e.rx.length?`<div><div class="lbl">Market reaction ${e.rx_final?"by close":"so far"}</div><div class="react" style="margin-top:6px">${rxList(e.rx,6)}</div></div>`:""}
      </div></td></tr>`}).join("")).join(""):`<tr><td colspan="7" style="padding:16px;color:var(--muted)">${empty}</td></tr>`)+`</tbody>`;
 }
+let earnF=store.get("md.earnF","All");
+document.getElementById("earnFilter").addEventListener("click",e=>{const g=e.target.dataset.g;if(g){earnF=g;store.set("md.earnF",g);renderEarn()}});
 function renderEarn(){
+  if(!["All","AI","Financials"].includes(earnF))earnF="All";
+  document.getElementById("earnFilter").innerHTML=["All","AI","Financials"].map(g=>`<button class="chip" data-g="${g}" aria-pressed="${g===earnF}">${g}</button>`).join("");
+  for(const [id,g] of [["Tech","AI"],["Fin","Financials"]]){const hide=earnF!=="All"&&earnF!==g;document.getElementById("earn"+id+"H").hidden=hide;document.getElementById("earn"+id+"P").hidden=hide}
   document.getElementById("tracked").innerHTML=TRACKED.map(([g,l])=>`<div><h4>${g} (${l.length})</h4><ul>${l.map(([t,n])=>`<li>${n} <span class="num">${t}</span></li>`).join("")}</ul></div>`).join("");
   if(!ED){for(const id of ["earnTech","earnFin"])document.getElementById(id).innerHTML=`<tbody><tr><td style="padding:16px;color:var(--muted)">${edErr?"Couldn't load earnings. Run scripts/fetch_earnings.py, then reload.":"Loading earnings…"}</td></tr></tbody>`;return}
   document.getElementById("earnStamp").textContent="Updated "+hkt(ED.updated_utc)+" HKT";
   const money=(v,us)=>v==null?null:(us?"$":"")+fmt(v,2);
   const pend=t=>`<span class="flat">${Date.parse(t)>Date.now()?"–":"pending"}</span>`;
-  const rows=list=>`<thead><tr><th>Date (HKT)</th><th>Company</th><th>When</th><th class="r">EPS est.</th><th class="r">EPS actual</th><th class="r">Revenue est.</th><th class="r">Revenue actual</th></tr></thead><tbody>`+
-   (list.length?list.map(r=>`<tr${Date.parse(r.time)<=Date.now()&&r.eps_act==null?' style="background:var(--warn-soft)"':""}><td class="nw">${hktDay(r.time)}</td><td><b>${esc(r.name)}</b> <span class="flat num">${esc(r.symbol)}</span><div style="margin-top:3px"><span class="tag">${esc(r.theme)}</span></div></td><td>${esc(r.when)}</td>
+  const rows=list=>`<thead><tr><th>Date (HKT)</th><th>Company</th><th class="r">EPS est.</th><th class="r">EPS actual</th><th class="r">Revenue est.</th><th class="r">Revenue actual</th></tr></thead><tbody>`+
+   (list.length?list.map(r=>`<tr${Date.parse(r.time)<=Date.now()&&r.eps_act==null?' style="background:var(--warn-soft)"':""}><td class="nw">${hktDay(r.time)}</td><td><b>${esc(r.name)}</b> <span class="flat num">${esc(r.symbol)}</span><div style="margin-top:3px"><span class="tag">${esc(r.theme)}</span></div></td>
      <td class="r num">${money(r.eps_est,r.us)??"–"}</td><td class="r num nw">${r.eps_act!=null?money(r.eps_act,r.us)+surp(r.eps_surprise):pend(r.time)}</td>
      <td class="r num">${r.rev_est?esc(r.rev_est):"–"}</td><td class="r num nw">${r.rev_act?esc(r.rev_act)+surp(r.rev_surprise):(r.rev_est?pend(r.time):"–")}</td></tr>`).join("")
-   :`<tr><td colspan="7" style="padding:16px;color:var(--muted)">No reports in this window.</td></tr>`)+`</tbody>`;
+   :`<tr><td colspan="6" style="padding:16px;color:var(--muted)">No reports in this window.</td></tr>`)+`</tbody>`;
   document.getElementById("earnTech").innerHTML=rows(ED.rows.filter(r=>r.group==="AI"));
   document.getElementById("earnFin").innerHTML=rows(ED.rows.filter(r=>r.group==="Financials"));
 }
