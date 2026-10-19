@@ -167,6 +167,7 @@ svg.yc{width:100%;max-width:520px;height:auto;display:block}
 .wl .cat{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
 .wl.hot .hl{font-weight:600}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--down);margin-right:6px;vertical-align:1px}
+.dot.medium{background:#D98A00}.dot.low{background:#A9B4BC}
 @media (max-width:520px){.wl{grid-template-columns:44px minmax(0,1fr)}.wl .cat{grid-column:2}.wl .hl{grid-column:2}}
 .legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted)}
 .legend i{display:inline-block;width:18px;height:0;border-top:2px solid var(--accent);vertical-align:middle;margin-right:6px}
@@ -249,12 +250,13 @@ details.tracked summary{cursor:pointer;font-weight:600;color:var(--accent);font-
       <div class="seg" id="calWin" role="group" aria-label="Calendar window">
         <button data-w="past">Past 2 weeks</button><button data-w="next">Today &amp; upcoming</button>
       </div>
-      <button class="chip" id="calHigh" aria-pressed="true">High impact only</button>
       <button class="chip" id="calAll" aria-pressed="false">Expand all</button>
     </div>
-    <p class="src">Events, forecasts and previous figures: Forex Factory weekly feed (covers the US, euro area, UK, Japan, China and Australia; one week at a time). Actual figures: US releases from FRED (official data, as first published); other countries picked out of news headlines by Gemini and only kept if the headline states the number. Indicator guides: written by Gemini once per indicator.</p>
+    <div class="chips" id="calImpact" role="group" aria-label="Impact" style="margin-bottom:6px"></div>
+    <div class="chips" id="calCountry" role="group" aria-label="Country"></div>
+    <p class="src">Events, forecasts and previous figures: Forex Factory weekly feed (every country and impact level it lists; one week at a time). Actual figures: US releases from FRED (official data, as first published); other countries picked out of news headlines by Gemini and only kept if the headline states the number. Indicator guides: written by Gemini once per indicator.</p>
     <div class="panel tbl"><table id="ecoTbl" class="cal"></table></div>
-    <p class="note">Tap any row for a guide to the indicator. <span class="dot"></span>= high impact. Actual = n/a when no headline stated the figure. Reactions show how markets moved from just before the release to that market's close ("so far" while it's open). Events released at the same time share the same reaction.</p>
+    <p class="note">Tap any row for a guide to the indicator. <span class="dot high"></span>high, <span class="dot medium"></span>medium, <span class="dot low"></span>low impact (Forex Factory's rating). Actual = n/a when no headline stated the figure. Reactions show how markets moved from just before the release to that market's close ("so far" while it's open). Events released at the same time share the same reaction.</p>
   </section>
 
   <!-- CENTRAL BANKS -->
@@ -375,7 +377,7 @@ const TRACKED=[["AI",[["NVDA","Nvidia"],["MSFT","Microsoft"],["GOOGL","Alphabet"
    ["9988.HK","Alibaba"],["9888.HK","Baidu"],["9984.T","SoftBank Group"],["8035.T","Tokyo Electron"],["6857.T","Advantest"],["6146.T","Disco"],["5803.T","Fujikura"],["0981.HK","SMIC"]]],
  ["Tech",[["AAPL","Apple"],["TSLA","Tesla"],["CRM","Salesforce"],["SAP","SAP"],["NFLX","Netflix"],["0700.HK","Tencent"],["1810.HK","Xiaomi"],["6758.T","Sony"],["INFY.NS","Infosys"]]],
  ["Financials",[["JPM","JPMorgan"],["BAC","Bank of America"],["GS","Goldman Sachs"],["MS","Morgan Stanley"],["WFC","Wells Fargo"],["BLK","BlackRock"],["0005.HK","HSBC"],["1299.HK","AIA"],["HDFCBANK.NS","HDFC Bank"]]]];
-let calWin=store.get("md.calWin","next"),calHigh=store.get("md.calHigh",true);
+let calWin=store.get("md.calWin","next"),calImp=store.get("md.calImp","All"),calCty=store.get("md.calCountry","*");
 const calOpen=new Set();let calAll=false;
 const hktDay=t=>new Date(t).toLocaleDateString("en-GB",{timeZone:"Asia/Hong_Kong",weekday:"short",day:"numeric",month:"short"});
 const hktTime=t=>new Date(t).toLocaleTimeString("en-GB",{timeZone:"Asia/Hong_Kong",hour:"2-digit",minute:"2-digit"});
@@ -392,17 +394,21 @@ document.getElementById("ecoTbl").addEventListener("click",e=>{const r=e.target.
   calOpen.has(k)?calOpen.delete(k):calOpen.add(k);renderCal()});
 document.getElementById("calAll").addEventListener("click",()=>{calAll=!calAll;calOpen.clear();renderCal()});
 document.getElementById("calWin").addEventListener("click",e=>{const w=e.target.dataset.w;if(w){calWin=w;store.set("md.calWin",w);renderCal()}});
-document.getElementById("calHigh").addEventListener("click",()=>{calHigh=!calHigh;store.set("md.calHigh",calHigh);renderCal()});
+document.getElementById("calImpact").addEventListener("click",e=>{const v=e.target.dataset.v;if(v){calImp=v;store.set("md.calImp",v);renderCal()}});
+document.getElementById("calCountry").addEventListener("click",e=>{const v=e.target.dataset.v;if(v){calCty=v;store.set("md.calCountry",v);renderCal()}});
 function renderCal(){
   document.querySelectorAll("#calWin button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.w===calWin));
   document.getElementById("calAll").setAttribute("aria-pressed",calAll);
   document.getElementById("calAll").textContent=calAll?"Collapse all":"Expand all";
-  document.getElementById("calHigh").setAttribute("aria-pressed",calHigh);
   const tb=document.getElementById("ecoTbl");
   if(!CD){tb.innerHTML=`<tbody><tr><td style="padding:16px;color:var(--muted)">${cdErr?"Couldn't load the calendar. Run scripts/fetch_calendar.py, then reload.":"Loading calendar…"}</td></tr></tbody>`;return}
   document.getElementById("calStamp").textContent="Updated "+hkt(CD.updated_utc)+" HKT";
   const now=Date.now(),todayHK=hktDay(now),past=calWin==="past";
-  let ev=CD.events.filter(e=>(!calHigh||e.impact==="High"));
+  const IMPS=["All","High","Medium","Low"],CTYS=["*",...Object.keys(CD.countries).filter(c=>CD.events.some(e=>e.country===c))];
+  if(!IMPS.includes(calImp))calImp="All";if(!CTYS.includes(calCty))calCty="*";
+  document.getElementById("calImpact").innerHTML=`<span class="flat" style="font-size:12px;align-self:center;margin-right:4px">Impact</span>`+IMPS.map(v=>`<button class="chip" data-v="${v}" aria-pressed="${v===calImp}">${v==="All"?"All":`<span class="dot ${v.toLowerCase()}"></span>${v}`}</button>`).join("");
+  document.getElementById("calCountry").innerHTML=`<span class="flat" style="font-size:12px;align-self:center;margin-right:4px">Country</span>`+CTYS.map(v=>`<button class="chip" data-v="${v}" aria-pressed="${v===calCty}">${v==="*"?"All":esc(CD.countries[v]||v)}</button>`).join("");
+  let ev=CD.events.filter(e=>(calImp==="All"||e.impact===calImp||(calImp==="Low"&&e.impact==="Holiday"))&&(calCty==="*"||e.country===calCty));
   ev=past?ev.filter(e=>Date.parse(e.time)<=now).reverse():ev.filter(e=>Date.parse(e.time)>now||hktDay(e.time)===todayHK);
   const days=[];for(const e of ev){const d=hktDay(e.time);if(!days.length||days[days.length-1][0]!==d)days.push([d,[]]);days[days.length-1][1].push(e)}
   const empty=past?"No released events yet. History builds up from 16 Oct as the site runs.":"No more events this week. Forex Factory publishes next week's calendar on Sunday.";
@@ -410,7 +416,7 @@ function renderCal(){
    (days.length?days.map(([d,rows])=>`<tr class="day"><td colspan="7">${d}${d===todayHK?" · today":""}</td></tr>`+rows.map(e=>{
     const k=e.id,open=calAll||calOpen.has(k),g=CD.guides[e.country+"|"+e.title],released=Date.parse(e.time)<=now;
     return `<tr class="ev" data-k="${esc(k)}" aria-expanded="${open}"><td class="num">${hktTime(e.time)}</td><td class="ctry">${esc(CD.countries[e.country]||e.country)}</td>
-     <td class="evn"><span class="car">${open?"▾":"▸"}</span>${e.impact==="High"?'<span class="dot" title="High impact"></span>':""}${esc(e.title)}${isRate(e.title)?`<span class="rtag">Rate decision</span>`:""}</td>
+     <td class="evn"><span class="car">${open?"▾":"▸"}</span>${e.impact==="Holiday"?'<span class="rtag">Holiday</span> ':`<span class="dot ${e.impact.toLowerCase()}" title="${e.impact} impact"></span>`}${esc(e.title)}${isRate(e.title)?`<span class="rtag">Rate decision</span>`:""}</td>
      <td class="r num">${esc(e.previous)||"–"}</td><td class="r num">${esc(e.forecast)||"–"}</td>
      <td class="r num nw">${e.actual?`${esc(e.actual)}${vsTag(e.surprise)}`:`<span class="flat">${released&&(e.forecast||e.previous)?"n/a":"–"}</span>`}</td>
      <td class="rxc">${e.rx&&e.rx.length?rxList(e.rx,2)+(e.rx_final?"":' <span class="flat" style="font-size:11px">so far</span>'):`<span class="flat">–</span>`}</td></tr>

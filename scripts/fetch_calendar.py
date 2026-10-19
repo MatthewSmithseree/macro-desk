@@ -31,10 +31,12 @@ NOW = datetime.now(timezone.utc)
 KEEP_DAYS = 14
 
 COUNTRIES = {"USD": "United States", "EUR": "Euro area", "GBP": "United Kingdom", "JPY": "Japan",
-             "CNY": "China", "AUD": "Australia"}
+             "CNY": "China", "AUD": "Australia", "CAD": "Canada", "NZD": "New Zealand", "CHF": "Switzerland",
+             "All": "Global"}
 REACT = {
     "USD": ["Dollar Index", "US 10Y yield", "S&P 500"], "EUR": ["EUR/USD", "Euro Stoxx 50"],
     "GBP": ["GBP/USD"], "JPY": ["USD/JPY", "Nikkei 225"], "CNY": ["USD/CNY", "Hang Seng"], "AUD": ["AUD/USD"],
+    "CAD": ["USD/CAD"], "NZD": ["NZD/USD"], "CHF": ["USD/CHF"], "All": [],
 }
 
 
@@ -47,7 +49,8 @@ def from_feed() -> list[dict]:
     r.raise_for_status()
     out = []
     for x in r.json():
-        if x.get("country") not in COUNTRIES or x.get("impact") not in ("High", "Medium"):
+        if x.get("country") not in COUNTRIES:  # keeps every country and impact level; the site filters
+            log.info("New country code in feed: %s", x.get("country"))
             continue
         t = datetime.fromisoformat(x["date"]).astimezone(timezone.utc)
         e = {"country": x["country"], "title": x["title"].strip(), "time": t.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -254,7 +257,7 @@ Plain English, no hype. Indicators:
 
 
 def add_guides(events: list[dict], guides: dict) -> None:
-    missing = sorted({f'{e["country"]}|{e["title"]}' for e in events} - set(guides))
+    missing = sorted({f'{e["country"]}|{e["title"]}' for e in events if e["impact"] != "Holiday"} - set(guides))
     for i in range(0, len(missing), 25):
         batch = missing[i:i + 25]
         res = ask_json(GUIDE_PROMPT % "\n".join(f"{k}\t{COUNTRIES[k.split('|')[0]]}: {k.split('|')[1]}" for k in batch))
@@ -287,7 +290,7 @@ def main() -> None:
     # market reaction for released events (reuses the News-tab method)
     rx_items = []
     for e in ev:
-        if _t(e) <= NOW and not e.get("rx_final"):
+        if _t(e) <= NOW and not e.get("rx_final") and REACT[e["country"]] and e["impact"] != "Holiday":
             rx_items.append({"time": _t(e), "instruments": REACT[e["country"]], "rx": e.get("rx", []), "ev": e})
     try:
         reactions(rx_items)

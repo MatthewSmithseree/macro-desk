@@ -50,7 +50,7 @@ INSTRUMENTS = {
     "Nifty 50": ("^NSEI", "pct"), "SSE Composite": ("000001.SS", "pct"),
     "USD/JPY": ("JPY=X", "pct"), "Dollar Index": ("DX-Y.NYB", "pct"), "EUR/USD": ("EURUSD=X", "pct"),
     "GBP/USD": ("GBPUSD=X", "pct"), "AUD/USD": ("AUDUSD=X", "pct"), "USD/KRW": ("KRW=X", "pct"),
-    "USD/CNY": ("CNY=X", "pct"), "Gold": ("GC=F", "pct"), "Brent crude": ("BZ=F", "pct"),
+    "USD/CNY": ("CNY=X", "pct"), "USD/CAD": ("CAD=X", "pct"), "NZD/USD": ("NZDUSD=X", "pct"), "USD/CHF": ("CHF=X", "pct"), "Gold": ("GC=F", "pct"), "Brent crude": ("BZ=F", "pct"),
     "WTI crude": ("CL=F", "pct"), "Bitcoin": ("BTC-USD", "pct"), "US 10Y yield": ("^TNX", "yield"),
 }
 CATEGORIES = ["Markets", "Rates", "Economy", "Earnings", "FX", "Commodities", "Central banks", "Geopolitics", "AI", "Other"]
