@@ -76,6 +76,9 @@ def core(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", (last if len(last.split()) >= 4 else title).lower()).strip()
 
 
+DIAG: dict[str, list] = {}
+
+
 def collect() -> dict[str, dict]:
     items, seen = {}, {}
     for bank, queries in BANKS.items():
@@ -85,7 +88,9 @@ def collect() -> dict[str, dict]:
                 found = search(q)
             except (requests.RequestException, ET.ParseError) as e:
                 log.warning("%s search failed: %s", bank, e)
+                DIAG.setdefault(bank, []).append(str(e)[:160])
                 continue
+            DIAG.setdefault(bank, []).append(len(found))
             for x in found:
                 if not x["title"] or x["time"] < NOW - timedelta(days=KEEP_DAYS):
                     continue
@@ -156,12 +161,19 @@ def main() -> None:
     try:  # refresh at most hourly, unless the list of firms changed or some pieces still need tagging
         age = NOW - datetime.fromisoformat(last["updated_utc"].replace("Z", "+00:00"))
         if (age < timedelta(minutes=60) and last.get("banks") == list(BANKS) and last.get("rules") == RULES_VERSION
-                and not last.get("pending") and os.environ.get("FORCE") != "1"):
+                and not last.get("pending") and "diag" in last and os.environ.get("FORCE") != "1"):
             log.info("Research refreshed %d min ago; reusing", age.total_seconds() // 60)
             return
     except (KeyError, ValueError):
         pass
     items = collect()
+    if not items:
+        # nothing came back (e.g. the search blocked this machine): keep what's published, never go blank
+        log.warning("No pages collected; keeping the previous research list. Diagnostics: %s", DIAG)
+        if last:
+            last["diag"] = {"time": NOW.strftime("%Y-%m-%dT%H:%M:%SZ"), "searches": DIAG, "kept_previous": True}
+            OUT.write_text(json.dumps(last, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        return
     prev = {x["id"]: x for x in last.get("all", [])}
     if last.get("rules") != RULES_VERSION:
         prev = {}  # selection rules changed: re-check everything
@@ -184,6 +196,7 @@ def main() -> None:
                # everything seen, with its verdict, so the next run doesn't re-classify it
                "all": [{"id": x["id"], "research": x.get("research"), "topic": x.get("topic")} for x in rows if "research" in x],
                "pending": sum(1 for x in rows if "research" not in x)}
+    payload["diag"] = {"time": payload["updated_utc"], "searches": DIAG, "kept_previous": False}
     OUT.write_text(json.dumps(payload, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     log.info("Wrote research.json: kept %d written market views out of %d pages", len(payload["items"]), len(rows))
 

@@ -36,7 +36,13 @@ jobs:
       - name: Restore last published data
         run: |
           for f in markets news calendar earnings research; do
-            curl -sfL "https://matthewsmithseree.github.io/macro-desk/data/$f.json" -o "/tmp/$f.json" && mv "/tmp/$f.json" "site/data/$f.json" || echo "no published $f.json yet"
+            curl -sfL "https://matthewsmithseree.github.io/macro-desk/data/$f.json" -o "/tmp/$f.json" || { echo "no published $f.json yet"; continue; }
+            # never restore an empty list over the committed copy
+            if python -c "import json,sys; d=json.load(open('/tmp/$f.json')); sys.exit(0 if any(isinstance(v,list) and v for v in d.values()) else 1)"; then
+              mv "/tmp/$f.json" "site/data/$f.json"
+            else
+              echo "published $f.json is empty; keeping the committed copy"
+            fi
           done
 
       - name: Fetch market data
