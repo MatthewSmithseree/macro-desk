@@ -274,7 +274,7 @@ details.tracked summary{cursor:pointer;font-weight:600;color:var(--accent);font-
     <div class="toolbar" style="margin:0 0 8px"><h2 style="margin:0">Bank research · last 30 days</h2><span class="sub" style="margin:0" id="resStamp"></span></div>
     <div class="chips" id="resTopic" role="group" aria-label="Topic" style="margin-bottom:6px"></div>
     <div class="chips" id="resBank" role="group" aria-label="Bank"></div>
-    <p class="src">Public research and market commentary from each firm's own website, found through Google News search and refreshed hourly. Gemini drops non-research pages (fund documents, job ads, results) and tags each piece with a topic. The site only shows the title and links to the original.</p>
+    <p class="src">Written reports and articles from each firm's own website, found through Google News search and refreshed hourly. Gemini keeps only macro, asset-allocation, FX, rates, equity and commodity views, and drops podcasts, videos, events, single-company and sector pieces. The site only shows the title and links to the original.</p>
     <div class="panel" id="resList"></div>
     <p class="note">Covers what each firm publishes for free (wealth-management and asset-management commentary). Full sell-side research is for clients only and isn't included.</p>
   </section>
@@ -665,7 +665,7 @@ function renderResearch(){
   const list=RD.items.filter(x=>(resTopic==="All"||x.topic===resTopic)&&(resBank==="All"||x.bank===resBank));
   el.innerHTML=list.length?list.map(x=>`<div class="ritem"><span class="num flat">${hktDay(x.time)}</span><span class="rbank">${esc(x.bank)}</span>
     <a class="hlink" href="${safeUrl(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a><span class="tag">${esc(x.topic)}</span></div>`).join("")
-   :`<div style="padding:16px;color:var(--muted)">Nothing published on this topic in the last 30 days.</div>`;
+   :`<div style="padding:16px;color:var(--muted)">No written views on this topic in the last 30 days.</div>`;
 }
 
 /* ---------- tabs ---------- */
