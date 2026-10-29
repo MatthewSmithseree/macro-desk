@@ -34,7 +34,9 @@ BANKS = {
     "JPMorgan": ["site:jpmorgan.com/insights", "site:am.jpmorgan.com insights"],
     "Goldman Sachs": ["site:goldmansachs.com/insights"],
     "Morgan Stanley": ["site:morganstanley.com/insights OR site:morganstanley.com/ideas"],
-    "HSBC": ["site:privatebanking.hsbc.com OR site:hsbc.com/insight"],
+    "HSBC": ["site:privatebanking.hsbc.com OR site:hsbc.com/insight",
+             'site:hsbc.com "FX Viewpoint" OR "FX Navigator"',  # HSBC's public FX notes (Expat, Business Go)
+             "site:business.hsbc.com insights"],
     "UBS": ["site:ubs.com"],
     "Barclays": ["site:privatebank.barclays.com OR site:ib.barclays"],
     "BlackRock": ["site:blackrock.com/corporate/insights"],
@@ -54,13 +56,25 @@ def search(query: str) -> list[dict]:
             t = parsedate_to_datetime(it.findtext("pubDate"))
         except (TypeError, ValueError):
             continue
-        out.append({"title": SUFFIX.sub("", (it.findtext("title") or "").strip()),
+        out.append({"title": (it.findtext("title") or "").strip(),
                     "url": (it.findtext("link") or "").strip(), "time": t})
     return out
 
 
+def clean(title: str) -> str:
+    title = SUFFIX.sub("", title)
+    return re.sub(r"(\s*\|\s*(Insights|HSBC[^|]*))+$", "", title).strip()
+
+
+def core(title: str) -> str:
+    """Key for spotting the same piece posted on two sites, e.g. 'FX Viewpoint - 2 October 2026 | GBP under
+    pressure' and 'FX Viewpoint: GBP under pressure'."""
+    last = re.split(r"\s*[|:]\s*", title)[-1]
+    return re.sub(r"[^a-z0-9]+", " ", (last if len(last.split()) >= 4 else title).lower()).strip()
+
+
 def collect() -> dict[str, dict]:
-    items = {}
+    items, seen = {}, {}
     for bank, queries in BANKS.items():
         n = 0
         for q in queries:
@@ -72,10 +86,15 @@ def collect() -> dict[str, dict]:
             for x in found:
                 if not x["title"] or x["time"] < NOW - timedelta(days=KEEP_DAYS):
                     continue
-                i = norm_id(bank + " " + x["title"])
-                if i not in items:
-                    items[i] = {**x, "id": i, "bank": bank}
-                    n += 1
+                x["title"] = clean(x["title"])
+                i, k = norm_id(bank + " " + x["title"]), (bank, core(x["title"]))
+                if k in seen:  # same piece on another site: keep the earliest
+                    j = seen[k]
+                    if x["time"] < items[j]["time"]:
+                        items[j].update(time=x["time"], url=x["url"])
+                    continue
+                items[i], seen[k] = {**x, "id": i, "bank": bank}, i
+                n += 1
         log.info("%s: %d pieces", bank, n)
     return items
 
