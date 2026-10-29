@@ -155,6 +155,10 @@ svg.yc{width:100%;max-width:520px;height:auto;display:block}
 .rcard a:hover{text-decoration:underline}
 .past{list-style:none;padding:6px 0 0!important;font-size:13px!important}
 .past li{display:flex;gap:10px}
+.ritem{display:grid;grid-template-columns:84px 118px minmax(0,1fr) auto;gap:10px;align-items:baseline;padding:9px 14px;border-bottom:1px solid var(--line);font-size:14px}
+.ritem:last-child{border-bottom:0}
+.rbank{font-weight:700;font-size:12px;color:var(--accent)}
+@media (max-width:620px){.ritem{grid-template-columns:auto minmax(0,1fr)}.ritem .hlink{grid-column:1/-1}.ritem .tag{justify-self:start}}
 .top1{display:grid;gap:0}
 .story{padding:14px 16px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:28px minmax(0,1fr);gap:4px 10px}
 .story:last-child{border-bottom:0}
@@ -189,7 +193,7 @@ details.tracked summary{cursor:pointer;font-weight:600;color:var(--accent);font-
   <div class="wrap">
     <div class="bar">
       <span class="brand">Macro Desk</span>
-      <span class="pill">Live: Markets, Top, Calendar · sample: Central Banks, Research</span>
+      <span class="pill">Live: Markets, Top, Calendar, Research · sample: Central Banks</span>
       <span class="clock num" id="clock"></span>
     </div>
     <div class="sessions" id="sessions"></div>
@@ -267,9 +271,12 @@ details.tracked summary{cursor:pointer;font-weight:600;color:var(--accent);font-
 
   <!-- RESEARCH -->
   <section data-panel="research" hidden>
-    <p class="src">The script checks each page once a week. Gemini turns the latest piece into 3–4 bullets; the full piece stays on the publisher's site behind the link.</p>
-    <div class="rgrid" id="research"></div>
-    <p class="note">The summaries here are placeholders, not taken from the actual reports. The links go to the real publisher pages.</p>
+    <div class="toolbar" style="margin:0 0 8px"><h2 style="margin:0">Bank research · last 30 days</h2><span class="sub" style="margin:0" id="resStamp"></span></div>
+    <div class="chips" id="resTopic" role="group" aria-label="Topic" style="margin-bottom:6px"></div>
+    <div class="chips" id="resBank" role="group" aria-label="Bank"></div>
+    <p class="src">Public research and market commentary from each firm's own website, found through Google News search and refreshed hourly. Gemini drops non-research pages (fund documents, job ads, results) and tags each piece with a topic. The site only shows the title and links to the original.</p>
+    <div class="panel" id="resList"></div>
+    <p class="note">Covers what each firm publishes for free (wealth-management and asset-management commentary). Full sell-side research is for clients only and isn't included.</p>
   </section>
 </main>
 
@@ -642,38 +649,23 @@ function renderTop(){
 }
 document.getElementById("wireFilter").addEventListener("click",e=>{const c=e.target.dataset.c;if(c){wireF=c;store.set("md.wireF",c);renderTop()}});
 
-/* ---------- research (placeholder summaries, real links) ---------- */
-const RESEARCH=[
- {house:"J.P. Morgan Asset Management",series:"Weekly Market Recap",freq:"Weekly, Mondays",date:"12 Oct",title:"Sample: Stocks steady as investors look to earnings season",
-  pts:["Placeholder: what moved equities, bonds and the dollar last week","Placeholder: the key data release and how markets read it","Placeholder: what the team is watching this week"],
-  url:"https://am.jpmorgan.com/us/en/asset-management/adv/insights/market-insights/market-updates/weekly-market-recap/",
-  past:[["5 Oct","Sample: Jobs data in focus as the Fed weighs its next move"],["28 Sep","Sample: Quarter-end review"]]},
- {house:"J.P. Morgan Asset Management",series:"Guide to the Markets",freq:"Quarterly",date:"30 Sep",title:"Sample: Q4 Guide to the Markets",
-  pts:["Placeholder: valuation snapshot across regions","Placeholder: earnings growth expectations","Placeholder: fixed income yields vs history"],
-  url:"https://am.jpmorgan.com/us/en/asset-management/adv/insights/market-insights/guide-to-the-markets/",past:[]},
- {house:"BlackRock Investment Institute",series:"Weekly Commentary",freq:"Weekly, Mondays",date:"12 Oct",title:"Sample: Staying pro-risk on the AI theme",
-  pts:["Placeholder: the main investment view this week","Placeholder: what changed in their positioning","Placeholder: key risks they flag"],
-  url:"https://www.blackrock.com/corporate/insights/blackrock-investment-institute/weekly-commentary",
-  past:[["5 Oct","Sample: Income in a world of lower rates"],["28 Sep","Sample: Japan's reflation story"]]},
- {house:"Goldman Sachs",series:"Top of Mind (Global Investment Research)",freq:"Roughly every 3–4 weeks",date:"8 Oct",title:"Sample: Is the AI capex boom sustainable?",
-  pts:["Placeholder: the question the issue asks","Placeholder: views from the interviewed experts","Placeholder: GS economists' and strategists' take"],
-  url:"https://www.goldmansachs.com/insights/top-of-mind",site:"goldmansachs.com",
-  past:[["17 Sep","Sample: Fed independence"],["20 Aug","Sample: Dollar outlook"]]},
- {house:"Morgan Stanley",series:"Thoughts on the Market (podcast + transcript)",freq:"Most weekdays",date:"13 Oct",title:"Sample: Why credit spreads look tight but may stay that way",
-  pts:["Placeholder: the main market call in the episode","Placeholder: the data or signal behind it","Placeholder: what would change the view"],
-  url:"https://www.morganstanley.com/ideas/thoughts-on-the-market",site:"morganstanley.com",
-  past:[["10 Oct","Sample: The outlook for Asian equities"],["9 Oct","Sample: Rates strategy ahead of CPI"]]},
-];
+/* ---------- research (live: data/research.json, written by scripts/fetch_research.py) ---------- */
+let RD=null,rdErr=false,resTopic=store.get("md.resTopic","All"),resBank=store.get("md.resBank","All");
+function loadResearch(){fetch("data/research.json",{cache:"no-store"}).then(r=>{if(!r.ok)throw r.status;return r.json()}).then(d=>{RD=d;rdErr=false;renderResearch()}).catch(()=>{rdErr=true;renderResearch()})}
+document.getElementById("resTopic").addEventListener("click",e=>{const v=e.target.dataset.v;if(v){resTopic=v;store.set("md.resTopic",v);renderResearch()}});
+document.getElementById("resBank").addEventListener("click",e=>{const v=e.target.dataset.v;if(v){resBank=v;store.set("md.resBank",v);renderResearch()}});
 function renderResearch(){
-  document.getElementById("research").innerHTML=RESEARCH.map(r=>`<article class="panel rcard">
-   <div class="house">${r.house}</div>
-   <div class="meta"><span><b>${r.series}</b></span><span>${r.freq}</span><span class="num">Latest: ${r.date}</span></div>
-   <h3>${r.title}</h3>
-   <div class="ai"><b>Summary</b>Placeholder bullets until the live version is built</div>
-   <ul>${r.pts.map(p=>`<li>${p}</li>`).join("")}</ul>
-   <a href="${r.url}" target="_blank" rel="noopener">Read the full piece on ${r.site||(r.house.startsWith("J.P.")?"jpmorgan.com":"blackrock.com")} ↗</a>
-   ${r.past.length?`<details class="more"><summary>Previous editions</summary><ul class="past">${r.past.map(([d,t])=>`<li><span class="flat num">${d}</span><span>${t}</span></li>`).join("")}</ul></details>`:""}
-  </article>`).join("");
+  const el=document.getElementById("resList");
+  if(!RD){el.innerHTML=`<div style="padding:16px;color:var(--muted)">${rdErr?"Couldn't load research. Run scripts/fetch_research.py, then reload.":"Loading research…"}</div>`;return}
+  document.getElementById("resStamp").textContent="Updated "+hkt(RD.updated_utc)+" HKT";
+  const T=["All",...RD.topics],B=["All",...RD.banks];if(!T.includes(resTopic))resTopic="All";if(!B.includes(resBank))resBank="All";
+  const count=(t,b)=>RD.items.filter(x=>(t==="All"||x.topic===t)&&(b==="All"||x.bank===b)).length;
+  document.getElementById("resTopic").innerHTML=`<span class="flat" style="font-size:12px;align-self:center;margin-right:4px">Topic</span>`+T.map(v=>`<button class="chip" data-v="${esc(v)}" aria-pressed="${v===resTopic}">${esc(v)} <span class="flat">${count(v,resBank)}</span></button>`).join("");
+  document.getElementById("resBank").innerHTML=`<span class="flat" style="font-size:12px;align-self:center;margin-right:4px">Firm</span>`+B.map(v=>`<button class="chip" data-v="${esc(v)}" aria-pressed="${v===resBank}">${esc(v)}</button>`).join("");
+  const list=RD.items.filter(x=>(resTopic==="All"||x.topic===resTopic)&&(resBank==="All"||x.bank===resBank));
+  el.innerHTML=list.length?list.map(x=>`<div class="ritem"><span class="num flat">${hktDay(x.time)}</span><span class="rbank">${esc(x.bank)}</span>
+    <a class="hlink" href="${safeUrl(x.url)}" target="_blank" rel="noopener">${esc(x.title)}</a><span class="tag">${esc(x.topic)}</span></div>`).join("")
+   :`<div style="padding:16px;color:var(--muted)">Nothing published on this topic in the last 30 days.</div>`;
 }
 
 /* ---------- tabs ---------- */
@@ -683,7 +675,7 @@ document.getElementById("tabs").addEventListener("click",e=>{const t=e.target.da
 const srcT=document.getElementById("srcToggle");srcT.checked=store.get("md.src",false);document.body.classList.toggle("show-src",srcT.checked);
 srcT.addEventListener("change",()=>{document.body.classList.toggle("show-src",srcT.checked);store.set("md.src",srcT.checked)});
 
-renderMarkets();loadMarkets();setInterval(loadMarkets,5*60*1000);renderTop();loadNews();setInterval(loadNews,5*60*1000);renderCal();renderEarn();loadCal();setInterval(loadCal,5*60*1000);renderCB();renderResearch();
+renderMarkets();loadMarkets();setInterval(loadMarkets,5*60*1000);renderTop();loadNews();setInterval(loadNews,5*60*1000);renderCal();renderEarn();loadCal();setInterval(loadCal,5*60*1000);renderCB();renderResearch();loadResearch();setInterval(loadResearch,15*60*1000);
 const TABS=["markets","top","calendar","cb","research"],h=location.hash.slice(1),saved=store.get("md.tab","markets");
 show(TABS.includes(h)?h:TABS.includes(saved)?saved:"markets");
 </script>

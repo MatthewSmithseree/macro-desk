@@ -35,7 +35,7 @@ jobs:
       # Start from the last published data, so a source that fails this run doesn't blank the site.
       - name: Restore last published data
         run: |
-          for f in markets news calendar earnings; do
+          for f in markets news calendar earnings research; do
             curl -sfL "https://matthewsmithseree.github.io/macro-desk/data/$f.json" -o "/tmp/$f.json" && mv "/tmp/$f.json" "site/data/$f.json" || echo "no published $f.json yet"
           done
 
@@ -58,6 +58,12 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+
+      - name: Fetch bank research (refreshes at most hourly)
+        run: python scripts/fetch_research.py
+        continue-on-error: true
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
       - name: Fetch earnings (refreshes at most hourly)
         run: python scripts/fetch_earnings.py
